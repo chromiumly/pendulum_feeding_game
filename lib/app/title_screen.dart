@@ -15,8 +15,26 @@ class TitleScreen extends StatefulWidget {
   State<TitleScreen> createState() => _TitleScreenState();
 }
 
-class _TitleScreenState extends State<TitleScreen> {
+class _TitleScreenState extends State<TitleScreen>
+    with SingleTickerProviderStateMixin {
   bool _showHowToPlay = false;
+
+  /// "TAP TO START" fades between 50% and 100% opacity, never fully out.
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _pulseOpacity = Tween<double>(
+    begin: 1,
+    end: 0.5,
+  ).animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   void _start() {
     Navigator.of(context).pushReplacement(
@@ -70,9 +88,12 @@ class _TitleScreenState extends State<TitleScreen> {
               width: 300,
               height: 60,
               child: Center(
-                child: OutlinedText(
-                  'TAP TO START',
-                  style: GameTextStyles.tapToStart,
+                child: FadeTransition(
+                  opacity: _pulseOpacity,
+                  child: OutlinedText(
+                    'TAP TO START',
+                    style: GameTextStyles.tapToStart,
+                  ),
                 ),
               ),
             ),

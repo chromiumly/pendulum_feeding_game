@@ -10,7 +10,9 @@ import 'setup_rules.dart';
 
 /// setup: the player places the pendulum; nothing moves.
 /// countdown: 3, 2, 1 and "START"; nothing moves and the clock is stopped.
-/// playing: physics, food and the time limit run.
+/// playing: physics, food and the time limit run. After the time limit,
+///   play goes on only while a food thrown before it is in the air (a
+///   buzzer beater): it still scores if it reaches the bride.
 /// finished: time is up; the state is frozen.
 enum GamePhase { setup, countdown, playing, finished }
 
@@ -22,20 +24,19 @@ class Aim {
   final Vec2 current;
 }
 
-/// Setup-screen drag in progress. [rawTheta] follows the pointer without
-/// the angle limit, so that dragging past a limit and back feels continuous.
+/// Setup-screen drag in progress.
 class _Placement {
   const _Placement({
     required this.handle,
     required this.pivot,
     required this.pointerAngle,
-    required this.rawTheta,
   });
 
   final SetupHandle handle;
   final Vec2 pivot;
+
+  /// Pointer angle around [pivot] at the previous drag position.
   final double pointerAngle;
-  final double rawTheta;
 }
 
 /// One play-through of the game: the single owner of all gameplay state.
@@ -76,6 +77,10 @@ class GameSession {
   int get score => _score;
   GamePhase get phase => _phase;
   bool get isFinished => _phase == GamePhase.finished;
+
+  /// The time limit has been reached; no more throws. The game may still be
+  /// playing out a buzzer beater.
+  bool get isTimeUp => _elapsedSteps >= config.timeLimitSteps;
 
   /// The handle being dragged on the setup screen, if any.
   SetupHandle? get activeHandle => _placement?.handle;
@@ -138,36 +143,37 @@ class GameSession {
       brideGrabRadius: config.setupBrideGrabRadius,
     );
     if (handle == null) return;
-    final (pivot, theta) = switch (handle) {
-      SetupHandle.joint => (config.pendulumOrigin, _pendulumState.upperTheta),
-      SetupHandle.bride => (positions.upper, _pendulumState.lowerTheta),
+    final pivot = switch (handle) {
+      SetupHandle.joint => config.pendulumOrigin,
+      SetupHandle.bride => positions.upper,
     };
     _placement = _Placement(
       handle: handle,
       pivot: pivot,
       pointerAngle: pendulumAngle(pivot, point),
-      rawTheta: theta,
     );
   }
 
   /// Rotates the grabbed rod by the pointer's angular movement around its
-  /// pivot. Both angular velocities stay zero.
+  /// pivot, all the way round if the player likes. The angle is normalized
+  /// into [0, 2pi) (0 to 360 degrees). Both angular velocities stay zero.
   void updatePlacement(Vec2 point) {
     final placement = _placement;
     if (placement == null) return;
     final pointerAngle = pendulumAngle(placement.pivot, point);
-    final rawTheta =
-        placement.rawTheta + wrapAngle(pointerAngle - placement.pointerAngle);
     _placement = _Placement(
       handle: placement.handle,
       pivot: placement.pivot,
       pointerAngle: pointerAngle,
-      rawTheta: rawTheta,
     );
 
-    final limit = config.setupAngleLimit;
-    final theta = rawTheta.clamp(-limit, limit);
     final state = _pendulumState;
+    final current = placement.handle == SetupHandle.joint
+        ? state.upperTheta
+        : state.lowerTheta;
+    final theta = normalizeAngle(
+      current + wrapAngle(pointerAngle - placement.pointerAngle),
+    );
     _setPendulumState(
       PendulumState(
         upperTheta: placement.handle == SetupHandle.joint
@@ -186,16 +192,39 @@ class GameSession {
     _placement = null;
   }
 
+  /// Ends setup (the スタート button). The pendulum gets its initial speed
+  /// now (see [startOmegas]); it starts moving when play begins.
   void startCountdown() {
     if (_phase != GamePhase.setup) return;
     _placement = null;
+    final params = config.pendulumParams;
+    final state = _pendulumState;
+    final omegas = startOmegas(
+      params: params,
+      state: state,
+      targetEnergy: config.startEnergyTopMultiple * brideTopEnergy(params),
+      counterSpinRatio: config.startCounterSpinRatio,
+    );
+    _setPendulumState(
+      PendulumState(
+        upperTheta: state.upperTheta,
+        lowerTheta: state.lowerTheta,
+        upperOmega: omegas.upperOmega,
+        lowerOmega: omegas.lowerOmega,
+      ),
+    );
     _phase = GamePhase.countdown;
   }
 
   // ---- Input ---------------------------------------------------------------
 
   void beginAim(Vec2 point) {
-    if (_phase != GamePhase.playing || _food.isFlying || _aim != null) return;
+    if (_phase != GamePhase.playing ||
+        isTimeUp ||
+        _food.isFlying ||
+        _aim != null) {
+      return;
+    }
     _aim = Aim(start: point, current: point);
   }
 
@@ -210,7 +239,9 @@ class GameSession {
     final velocity = aimVelocity;
     final armed = isAimArmed;
     _aim = null;
-    if (velocity == null || !armed || _phase != GamePhase.playing) return;
+    if (velocity == null || !armed || _phase != GamePhase.playing || isTimeUp) {
+      return;
+    }
     _food = _food.launched(velocity);
     _events.add(const FoodLaunched());
   }
@@ -243,14 +274,21 @@ class GameSession {
   void _stepPlaying() {
     final dt = config.fixedDt;
 
-    _setPendulumState(_pendulum.step(_pendulumState, dt));
+    final substepDt = dt / config.physicsSubsteps;
+    var pendulum = _pendulumState;
+    for (var i = 0; i < config.physicsSubsteps; i++) {
+      pendulum = _pendulum.step(pendulum, substepDt);
+    }
+    _setPendulumState(pendulum);
 
     if (_food.isFlying) {
       _stepFood(dt);
     }
 
-    _elapsedSteps++;
-    if (_elapsedSteps >= config.timeLimitSteps) {
+    if (!isTimeUp) _elapsedSteps++;
+    // Buzzer beater: a food still in the air at the time limit is played
+    // out; the game ends once it has been eaten or has left the world.
+    if (isTimeUp && !_food.isFlying) {
       _finish();
     }
   }

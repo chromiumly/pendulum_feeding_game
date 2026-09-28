@@ -60,7 +60,10 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/
+    - assets/images/background/
+    - assets/images/bride/
+    - assets/images/groom/
+    - assets/images/pendulum/
     - assets/icons/
 
   fonts:

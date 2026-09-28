@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -32,9 +33,23 @@ class PendulumFeedingGame extends FlameGame {
 
   final GameSession session;
   final FixedStepClock _clock;
+  late final GroomComponent _groom = GroomComponent(session);
 
   /// Session phase, for the Flutter overlays. Updated once per frame.
+  ///
+  /// [GamePhase.finished] is held back (still [GamePhase.playing]) while a
+  /// score effect is playing out, e.g. for a buzzer beater, and for
+  /// [resultPause] after it, so that the result does not cover it.
   late final phase = ValueNotifier<GamePhase>(session.phase);
+
+  /// Pause between the last score effect and the result [s].
+  static const resultPause = 0.3;
+
+  /// Time until the latest score effect has finished [s].
+  double _effectTimeLeft = 0;
+
+  /// Time until the result may be shown, once the game has finished [s].
+  double _resultDelay = 0;
 
   /// [GameSession.countdownNumber], for the countdown overlay.
   late final countdownNumber = ValueNotifier<int>(session.countdownNumber);
@@ -58,11 +73,10 @@ class PendulumFeedingGame extends FlameGame {
     // appears once its image has loaded.
     world.addAll([
       BackgroundComponent(session.config.worldSize),
-      GroomComponent(session),
+      _groom,
       BrideComponent(session),
       PendulumComponent(session),
       FoodComponent(session),
-      SetupHighlightComponent(session),
       if (StageStyle.showHitCircles) HitCirclesComponent(session),
       AimGuideComponent(session),
       HudComponent(session),
@@ -72,6 +86,8 @@ class PendulumFeedingGame extends FlameGame {
 
   @override
   void update(double dt) {
+    _effectTimeLeft = math.max(0, _effectTimeLeft - dt);
+    _resultDelay = math.max(0, _resultDelay - dt);
     final steps = _clock.advance(dt);
     for (var i = 0; i < steps; i++) {
       session.step();
@@ -82,7 +98,8 @@ class PendulumFeedingGame extends FlameGame {
   }
 
   void _publish() {
-    phase.value = session.phase;
+    final holdResult = session.isFinished && _resultDelay > 0;
+    phase.value = holdResult ? GamePhase.playing : session.phase;
     countdownNumber.value = session.countdownNumber;
   }
 
@@ -95,7 +112,14 @@ class PendulumFeedingGame extends FlameGame {
             points: points,
           ),
         );
-      case FoodLaunched() || FoodMissed() || GameFinished():
+        _effectTimeLeft = EatenEffect.duration;
+      case FoodLaunched():
+        _groom.playThrow();
+      case GameFinished():
+        // Events arrive in order, so a food eaten on the final step has
+        // already started its effect.
+        _resultDelay = _effectTimeLeft > 0 ? _effectTimeLeft + resultPause : 0;
+      case FoodMissed():
         break;
     }
   }

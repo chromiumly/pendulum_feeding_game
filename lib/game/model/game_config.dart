@@ -4,6 +4,28 @@ import '../../math/vec2.dart';
 import '../../physics/double_pendulum.dart';
 import 'food.dart';
 
+/// The game's pendulum: the prototype's model (see [PendulumParams]) with
+///
+/// * a longer lower rod, the bride's swing rope in the Figma art, and
+/// * 9x gravity, which plays the prototype's motion 3x faster (time scales
+///   with 1/sqrt(g)), for a livelier, more chaotic swing.
+const gamePendulumParams = PendulumParams(
+  lowerLength: 100,
+  gravityAcceleration: 9.81 * 3 * 3,
+);
+
+/// Where the setup screen starts: a "く", the upper rod down to the left and
+/// the lower rod down to the right, so that the bride hangs left of centre
+/// under the tree. (The prototype started from [PendulumState.initial], up
+/// to the right.) Both at rest; the start speed is added at スタート.
+/// Angles are in [0, 2pi) like placed ones: 315 degrees is -45.
+const setupStartPendulumState = PendulumState(
+  upperTheta: 7 * math.pi / 4,
+  lowerTheta: math.pi / 4,
+  upperOmega: 0,
+  lowerOmega: 0,
+);
+
 /// Tunable game rules and layout, in the 844x390 logical coordinate system.
 ///
 /// Rules and physics reproduce the TypeScript prototype. Screen positions
@@ -14,12 +36,13 @@ class GameConfig {
     this.worldSize = const Vec2(844, 390),
     this.fixedDt = 1 / 60,
     this.timeLimitSeconds = 20,
-    this.pendulumParams = const PendulumParams(),
-    this.pendulumInitialState = PendulumState.initial,
+    this.pendulumParams = gamePendulumParams,
+    this.physicsSubsteps = 2,
+    this.pendulumInitialState = setupStartPendulumState,
     this.pendulumOrigin = const Vec2(237.5, 116.5),
     this.brideMouthOffset = const Vec2(12, -50),
     this.brideMouthRadius = 16,
-    this.groomPosition = const Vec2(707, 344),
+    this.groomPosition = const Vec2(698, 344),
     this.foodSpawnPosition = const Vec2(727, 216),
     this.foodGravity = const Vec2(0, 700),
     this.foodTypes = defaultFoodTypes,
@@ -29,7 +52,8 @@ class GameConfig {
     this.pointsPerFood = 100,
     this.countdownSeconds = 3,
     this.startCueSeconds = 0.8,
-    this.setupAngleLimit = 3 * math.pi / 4,
+    this.startEnergyTopMultiple = 2.5,
+    this.startCounterSpinRatio = 1.0,
     this.setupJointGrabRadius = 24,
     this.setupBrideGrabRadius = 48,
   });
@@ -42,6 +66,11 @@ class GameConfig {
   final int timeLimitSeconds;
 
   final PendulumParams pendulumParams;
+
+  /// RK4 steps per [fixedDt] for the pendulum. The faster, more energetic
+  /// swing needs a smaller step to stay accurate: with 2, the energy drifts
+  /// about 0.1% over a game instead of about 2%.
+  final int physicsSubsteps;
   final PendulumState pendulumInitialState;
   final Vec2 pendulumOrigin;
 
@@ -53,6 +82,7 @@ class GameConfig {
   /// Hit radius around the bride's mouth [px].
   final double brideMouthRadius;
 
+  /// Centre between the groom's shoes, on the ground [px].
   final Vec2 groomPosition;
 
   final Vec2 foodSpawnPosition;
@@ -79,10 +109,22 @@ class GameConfig {
   /// How long "START" is shown after the countdown before play begins [s].
   final double startCueSeconds;
 
-  /// Placed angles are limited to [-limit, limit] [rad]. This keeps the
-  /// pendulum from starting (nearly) upside down, and keeps angles away from
-  /// the ±pi wrap so that a dragged handle never jumps.
-  final double setupAngleLimit;
+  /// Mechanical energy at the start of play, as a multiple of the energy the
+  /// bride alone needs to swing up to straight above the joint. Placements
+  /// with less get the difference as initial speed (see `startOmegas`); at
+  /// 2.5 that is every placement.
+  ///
+  /// 1 is rarely enough, since the joint takes part of the energy. In
+  /// simulation at 2.5, the bride reached the top in all but 1 of 300
+  /// random placements, from half of them within 1.6 s and from 90% within
+  /// 5.3 s.
+  final double startEnergyTopMultiple;
+
+  /// At the start of play the joint turns against the bride at this multiple
+  /// of her angular speed (see `startOmegas`). In simulation, 1 made the
+  /// bride spin around the joint about 5 times per game (1 when only she was
+  /// started), and left only 5% of games without such a spin (50% before).
+  final double startCounterSpinRatio;
 
   /// Grab radius around the middle joint on the setup screen [px].
   final double setupJointGrabRadius;

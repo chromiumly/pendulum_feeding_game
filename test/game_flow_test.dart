@@ -1,10 +1,59 @@
+import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/app/app.dart';
+import 'package:pendulum_feeding_game/game/flame/components/stage_components.dart';
 import 'package:pendulum_feeding_game/game/flame/pendulum_feeding_game.dart';
 import 'package:pendulum_feeding_game/game/model/game_session.dart';
+import 'package:pendulum_feeding_game/game/model/setup_rules.dart';
 import 'package:pendulum_feeding_game/math/vec2.dart';
+
+/// Flame mounts components in order, so the input layer is mounted only
+/// after the sprites before it. Image decoding needs real async time, and
+/// each continuation needs a pump to run in the fake-async zone. Once the
+/// input layer is mounted, the game widget registers its drag detector a
+/// few frames later.
+Future<void> _waitForSprites(WidgetTester tester) async {
+  for (var i = 0; i < 10; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pump(const Duration(microseconds: 16667));
+  }
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(microseconds: 16667));
+  }
+}
+
+/// Whether the food component paints anything this frame.
+bool _drawsFood(PendulumFeedingGame game) {
+  final canvas = _CountingCanvas();
+  game.world.children.whereType<FoodComponent>().single.render(canvas);
+  return canvas.calls > 0;
+}
+
+/// Canvas calls made by the bride component this frame.
+int _brideDrawCalls(PendulumFeedingGame game) =>
+    _drawCalls<BrideComponent>(game);
+
+/// Canvas calls made by the (single) world component of type [T].
+int _drawCalls<T extends Component>(PendulumFeedingGame game) {
+  final canvas = _CountingCanvas();
+  game.world.children.whereType<T>().single.render(canvas);
+  return canvas.calls;
+}
+
+/// Counts drawing calls instead of painting.
+class _CountingCanvas implements Canvas {
+  int calls = 0;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    calls++;
+    return null;
+  }
+}
 
 void main() {
   testWidgets(
@@ -71,15 +120,7 @@ void main() {
 
     await tester.pumpWidget(const PendulumFeedingApp());
     await tester.tap(find.text('TAP TO START'));
-    await tester.pump();
-    // Flame mounts components in order, so the input layer is mounted only
-    // after the sprites before it; image decoding needs real async time.
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 500)),
-    );
-    for (var i = 0; i < 30; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
+    await _waitForSprites(tester);
     final game = tester
         .widget<GameWidget<PendulumFeedingGame>>(
           find.byType(GameWidget<PendulumFeedingGame>),
@@ -102,6 +143,70 @@ void main() {
     await tester.pump();
 
     expect(session.phase, GamePhase.setup);
-    expect(session.pendulumState.upperTheta.abs(), lessThan(0.05));
+    // A wrong stage scale would be off by far more. The remaining error is
+    // Flame's DragUpdateEvent.localEndPosition, which is one move delta
+    // ahead of the pointer (about 0.06 rad here).
+    // Angles are normalized into [0, 2pi), so a slight overshoot past 0
+    // reads as just under 2pi.
+    expect(wrapAngle(session.pendulumState.upperTheta).abs(), lessThan(0.15));
+  });
+
+  testWidgets('groom is hidden in setup and throws when the food launches', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    Future<void> frames(int count) async {
+      for (var i = 0; i < count; i++) {
+        await tester.pump(const Duration(microseconds: 16667));
+      }
+    }
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    await tester.tap(find.text('TAP TO START'));
+    await _waitForSprites(tester);
+    final game = tester
+        .widget<GameWidget<PendulumFeedingGame>>(
+          find.byType(GameWidget<PendulumFeedingGame>),
+        )
+        .game!;
+    final groom = game.world.children.whereType<GroomComponent>().single;
+    expect(groom.isVisible, isFalse);
+    expect(_drawsFood(game), isFalse);
+    // The bride glows (extra draws behind her sprite) only during setup.
+    final setupBrideDraws = _brideDrawCalls(game);
+    // Likewise the middle joint's pivot.
+    final setupPendulumDraws = _drawCalls<PendulumComponent>(game);
+
+    await tester.tap(find.text('スタート'));
+    await frames(10);
+    expect(groom.isVisible, isTrue);
+    expect(groom.current, GroomPose.hold);
+    expect(_drawsFood(game), isTrue);
+    expect(_brideDrawCalls(game), 1);
+    expect(setupBrideDraws, greaterThan(1));
+    // Two rods and two pivots once the glow is gone.
+    expect(_drawCalls<PendulumComponent>(game), 4);
+    expect(setupPendulumDraws, greaterThan(4));
+    await frames(240); // Rest of the countdown and "START".
+    expect(game.session.phase, GamePhase.playing);
+
+    // Pull back and release: the food launches on release, as before.
+    final gesture = await tester.startGesture(const Offset(400, 200));
+    for (var i = 1; i <= 10; i++) {
+      await gesture.moveTo(Offset(400 + 5.0 * i, 200 + 5.0 * i));
+      await frames(1);
+    }
+    expect(game.session.food.isFlying, isFalse);
+    expect(groom.current, GroomPose.hold);
+    await gesture.up();
+    expect(game.session.food.isFlying, isTrue);
+
+    await frames(1);
+    expect(groom.current, GroomPose.throwing);
+    await frames(20); // 3 frames x 0.08 s, plus a margin.
+    expect(groom.current, GroomPose.hold);
   });
 }

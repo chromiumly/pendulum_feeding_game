@@ -17,6 +17,9 @@ abstract final class Palette {
   static const popup = Color(0xFFC4B396);
   static const tile = Color(0xFFFFF8E8);
 
+  /// Soft pale-gold glow on what can be dragged on the setup screen.
+  static const setupGlow = Color(0xFFE8C872);
+
   /// Setup-screen hints and drag handles.
   static const accentRed = Color(0xFFFF383C);
 

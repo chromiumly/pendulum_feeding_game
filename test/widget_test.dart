@@ -16,6 +16,33 @@ void main() {
     expect(find.text('端末を横向きにしてください'), findsNothing);
   });
 
+  testWidgets('TAP TO START pulses between 50% and 100% opacity', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    final fade = tester.widget<FadeTransition>(
+      find
+          .ancestor(
+            of: find.text('TAP TO START'),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    );
+    final opacities = <double>[];
+    for (var i = 0; i < 60; i++) {
+      opacities.add(fade.opacity.value);
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final min = opacities.reduce((a, b) => a < b ? a : b);
+    final max = opacities.reduce((a, b) => a > b ? a : b);
+    expect(min, closeTo(0.5, 0.02));
+    expect(max, closeTo(1, 0.02));
+  });
+
   testWidgets('? opens the how-to popup without starting the game', (
     tester,
   ) async {

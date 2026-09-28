@@ -11,7 +11,7 @@ class EatenEffect extends Component {
   final Vector2 position;
   final int points;
 
-  static const _duration = 0.8;
+  static const duration = 0.8;
 
   @override
   Future<void> onLoad() async {
@@ -25,8 +25,8 @@ class EatenEffect extends Component {
         ..strokeWidth = 3,
     );
     ring.addAll([
-      ScaleEffect.to(Vector2.all(2.5), EffectController(duration: _duration)),
-      OpacityEffect.fadeOut(EffectController(duration: _duration)),
+      ScaleEffect.to(Vector2.all(2.5), EffectController(duration: duration)),
+      OpacityEffect.fadeOut(EffectController(duration: duration)),
     ]);
 
     final label = TextComponent(
@@ -42,10 +42,10 @@ class EatenEffect extends Component {
       ),
     );
     label.add(
-      MoveByEffect(Vector2(0, -40), EffectController(duration: _duration)),
+      MoveByEffect(Vector2(0, -40), EffectController(duration: duration)),
     );
 
     addAll([ring, label]);
-    add(RemoveEffect(delay: _duration));
+    add(RemoveEffect(delay: duration));
   }
 }
