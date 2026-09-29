@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../ranking/ranking_service.dart';
 import '../ui/text_styles.dart';
 import 'landscape_guard.dart';
 import 'title_screen.dart';
 
 class PendulumFeedingApp extends StatelessWidget {
-  const PendulumFeedingApp({super.key});
+  const PendulumFeedingApp({super.key, this.ranking});
+
+  /// Records games and reports ranks; without it everyone plays as a guest.
+  final RankingService? ranking;
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +21,7 @@ class PendulumFeedingApp extends StatelessWidget {
         fontFamily: GameTextStyles.rounded,
       ),
       builder: (context, child) => LandscapeGuard(child: child!),
-      home: const TitleScreen(),
+      home: TitleScreen(ranking: ranking),
     );
   }
 }

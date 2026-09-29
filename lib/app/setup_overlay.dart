@@ -5,7 +5,7 @@ import '../ui/text_styles.dart';
 import '../ui/widgets/outlined_text.dart';
 import '../ui/widgets/tile_button.dart';
 
-/// Hints and the スタート button over the game (Figma: 初期位置決め画面).
+/// The スタート button over the game (Figma: 初期位置決め画面).
 ///
 /// Only the button takes input; drags elsewhere reach the game, where the
 /// player moves the joint and the bride.
@@ -18,8 +18,6 @@ class SetupOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        _hint(left: 42, top: 347, text: '新婦を好きな位置に動かそう！'),
-        _hint(left: 558, top: 219, text: '位置を決めたらスタート！'),
         Positioned(
           left: 718,
           top: 262,
@@ -32,20 +30,34 @@ class SetupOverlay extends StatelessWidget {
       ],
     );
   }
+}
 
-  static Widget _hint({
-    required double left,
-    required double top,
-    required String text,
-  }) {
-    return Positioned(
-      left: left,
-      top: top,
-      width: 300,
-      height: 42,
-      child: IgnorePointer(
-        child: Center(child: OutlinedText(text, style: GameTextStyles.hint)),
-      ),
+/// The setup-screen hint. It is laid out behind the game, so that the
+/// pendulum swings in front of it.
+class SetupHint extends StatelessWidget {
+  const SetupHint({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          left: 5,
+          top: 0,
+          width: 465,
+          height: 46,
+          child: IgnorePointer(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedText(
+                '花嫁と支点の位置を決めよう！',
+                style: GameTextStyles.hint,
+                textAlign: TextAlign.left,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

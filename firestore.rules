@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// Ranking storage for 花嫁もぐもぐチャレンジ.
+//
+// players/{playerId}  Registered player IDs (from the QR codes). Written by
+//                     the host's admin script only. A client may check its
+//                     own ID, but cannot list them.
+// plays/{playId}      Every finished game: playerId, score, createdAt. Never
+//                     readable by clients; the host reads them in the
+//                     Firebase console.
+// scores/{playId}     The score of each play, without the player: counted
+//                     for "全試行中 N位".
+// bests/{bestKey}     Each player's best score, keyed by the SHA-256 hex of
+//                     the player ID (which cannot be reversed): counted for
+//                     "挑戦者中 N位".
+//
+// A client records a game in one write: plays/{playId} and scores/{playId},
+// plus bests/{bestKey} when the score is a new best. scores and bests are
+// only accepted together with a new, valid play of a registered player, so
+// that they always match what is in plays.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function playerDoc(playerId) {
+      return /databases/$(database)/documents/players/$(playerId);
+    }
+
+    function playDoc(playId) {
+      return /databases/$(database)/documents/plays/$(playId);
+    }
+
+    function scoreDoc(playId) {
+      return /databases/$(database)/documents/scores/$(playId);
+    }
+
+    function validScore(score) {
+      return score is int && score >= 0 && score <= 100000 && score % 100 == 0;
+    }
+
+    function validPlayId(playId) {
+      return playId is string && playId.matches('^[A-Za-z0-9_-]{8,64}$');
+    }
+
+    // plays/{playId} is created by this very write: it exists after the
+    // write but did not before.
+    function isNewPlay(playId) {
+      return validPlayId(playId)
+          && existsAfter(playDoc(playId))
+          && !exists(playDoc(playId));
+    }
+
+    function playAfter(playId) {
+      return getAfter(playDoc(playId)).data;
+    }
+
+    match /players/{playerId} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    match /plays/{playId} {
+      allow create: if validPlayId(playId)
+          && request.resource.data.keys().hasOnly(['playerId', 'score', 'createdAt'])
+          && request.resource.data.playerId is string
+          && exists(playerDoc(request.resource.data.playerId))
+          && validScore(request.resource.data.score)
+          && request.resource.data.createdAt == request.time
+          // Always recorded together with its anonymous score.
+          && existsAfter(scoreDoc(playId));
+      allow read, update, delete: if false;
+    }
+
+    match /scores/{playId} {
+      allow get, list: if true;
+      allow create: if isNewPlay(playId)
+          && request.resource.data.keys().hasOnly(['score'])
+          && request.resource.data.score == playAfter(playId).score;
+      allow update, delete: if false;
+    }
+
+    match /bests/{bestKey} {
+      // The best is the new play's score, and the play is by the player
+      // whose hashed ID is the key.
+      function matchesNewPlay() {
+        let data = request.resource.data;
+        let play = playAfter(data.playId);
+        return data.keys().hasOnly(['best', 'playId'])
+            && isNewPlay(data.playId)
+            && hashing.sha256(play.playerId).toHexString().lower() == bestKey
+            && data.best == play.score;
+      }
+
+      allow get, list: if true;
+      allow create: if matchesNewPlay();
+      allow update: if matchesNewPlay()
+          && request.resource.data.best > resource.data.best;
+      allow delete: if false;
+    }
+  }
+}

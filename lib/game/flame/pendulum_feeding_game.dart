@@ -13,7 +13,6 @@ import 'components/eaten_effect.dart';
 import 'components/hud_component.dart';
 import 'components/input_layer.dart';
 import 'components/stage_components.dart';
-import '../../ui/palette.dart';
 import 'stage_style.dart';
 
 /// Flame host for a [GameSession].
@@ -22,7 +21,7 @@ import 'stage_style.dart';
 /// its state, turn session events into effects, and publish the phase for the
 /// Flutter overlays.
 class PendulumFeedingGame extends FlameGame {
-  PendulumFeedingGame({required this.session})
+  PendulumFeedingGame({required this.session, this.onGameFinished})
     : _clock = FixedStepClock(stepDt: session.config.fixedDt),
       super(
         camera: CameraComponent.withFixedResolution(
@@ -32,6 +31,11 @@ class PendulumFeedingGame extends FlameGame {
       );
 
   final GameSession session;
+
+  /// Called with the final score as soon as the game has finished, before
+  /// the result is shown (see [phase]), e.g. to start recording it.
+  final void Function(int score)? onGameFinished;
+
   final FixedStepClock _clock;
   late final GroomComponent _groom = GroomComponent(session);
 
@@ -60,8 +64,10 @@ class PendulumFeedingGame extends FlameGame {
     _publish();
   }
 
+  /// Transparent: the stage background is drawn by Flutter behind the game,
+  /// so that the setup hint can sit between the two.
   @override
-  Color backgroundColor() => Palette.letterbox;
+  Color backgroundColor() => const Color(0x00000000);
 
   @override
   Future<void> onLoad() async {
@@ -72,7 +78,6 @@ class PendulumFeedingGame extends FlameGame {
     // Not awaited: the session runs from the first frame, and each sprite
     // appears once its image has loaded.
     world.addAll([
-      BackgroundComponent(session.config.worldSize),
       _groom,
       BrideComponent(session),
       PendulumComponent(session),
@@ -115,10 +120,11 @@ class PendulumFeedingGame extends FlameGame {
         _effectTimeLeft = EatenEffect.duration;
       case FoodLaunched():
         _groom.playThrow();
-      case GameFinished():
+      case GameFinished(:final score):
         // Events arrive in order, so a food eaten on the final step has
         // already started its effect.
         _resultDelay = _effectTimeLeft > 0 ? _effectTimeLeft + resultPause : 0;
+        onGameFinished?.call(score);
       case FoodMissed():
         break;
     }

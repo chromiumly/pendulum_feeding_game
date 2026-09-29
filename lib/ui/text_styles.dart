@@ -47,7 +47,7 @@ abstract final class GameTextStyles {
     height: 1.6,
   );
   static final hint = _roundedBase.copyWith(
-    fontSize: 20,
+    fontSize: 32,
     color: Palette.accentRed,
   );
   static final countdown = _roundedBase.copyWith(
@@ -59,13 +59,29 @@ abstract final class GameTextStyles {
     fontSize: 24,
     fontWeight: FontWeight.w800,
   );
-  static final resultLabel = _interBase.copyWith(
+  static final resultHeading = _interBase.copyWith(
+    fontSize: 32,
+    fontWeight: FontWeight.w800,
+  );
+  static final resultValue = _interBase.copyWith(
     fontSize: 48,
     fontWeight: FontWeight.w800,
   );
-  static final resultScore = _interBase.copyWith(
-    fontSize: 64,
+  static final resultRank = _interBase.copyWith(
+    fontSize: 20,
     fontWeight: FontWeight.w800,
+  );
+
+  /// Two-line notes in place of a rank (guest, failed); smaller than ranks.
+  static final resultNote = _interBase.copyWith(
+    fontSize: 17,
+    fontWeight: FontWeight.w800,
+    height: 1.25,
+  );
+  static final newRecord = _interBase.copyWith(
+    fontSize: 24,
+    fontWeight: FontWeight.w800,
+    color: const Color(0xFFFFFFFF),
   );
   static final buttonLabel = _interBase.copyWith(
     fontSize: 20,

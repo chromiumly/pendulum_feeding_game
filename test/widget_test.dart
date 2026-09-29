@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/app/app.dart';
 import 'package:pendulum_feeding_game/app/how_to_play_popup.dart';
 import 'package:pendulum_feeding_game/app/result_popup.dart';
+import 'package:pendulum_feeding_game/ranking/ranking_models.dart';
 
 void main() {
   testWidgets('title screen shows the title and TAP TO START', (tester) async {
@@ -76,27 +77,118 @@ void main() {
     expect(find.text('端末を横向きにしてください'), findsOneWidget);
   });
 
-  testWidgets('result popup shows the padded score and buttons', (
-    tester,
-  ) async {
-    var retries = 0;
-    var titles = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Center(
-          child: ResultPopup(
-            score: 700,
-            onRetry: () => retries++,
-            onTitle: () => titles++,
+  group('result popup', () {
+    Future<void> show(WidgetTester tester, RankingStatus ranking) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: ResultPopup(
+              score: 700,
+              ranking: ranking,
+              onRetry: () {},
+              onTitle: () {},
+            ),
           ),
         ),
+      );
+    }
+
+    const recorded = RankingRecorded(
+      RankingResult(
+        score: 700,
+        playRank: 35,
+        playCount: 210,
+        best: 2500,
+        isNewBest: false,
+        bestRank: 12,
+        playerCount: 41,
       ),
     );
-    expect(find.text('SCORE'), findsOneWidget);
-    expect(find.text('00700'), findsOneWidget);
-    await tester.tap(find.text('もう一度'));
-    await tester.tap(find.text('タイトルへ'));
-    await tester.pumpAndSettle();
-    expect((retries, titles), (1, 1));
+
+    testWidgets('shows both scores and ranks once recorded', (tester) async {
+      await show(tester, recorded);
+      expect(find.text('今回のスコア'), findsOneWidget);
+      expect(find.text('00700'), findsOneWidget);
+      expect(find.text('全試行中 35位 / 210回'), findsOneWidget);
+      expect(find.text('自己ベスト'), findsOneWidget);
+      expect(find.text('02500'), findsOneWidget);
+      expect(find.text('挑戦者中 12位 / 41人'), findsOneWidget);
+      expect(find.byType(NewRecordBubble), findsNothing);
+    });
+
+    testWidgets('a new best shows the New Record bubble', (tester) async {
+      await show(
+        tester,
+        const RankingRecorded(
+          RankingResult(
+            score: 2500,
+            playRank: 1,
+            playCount: 10,
+            best: 2500,
+            isNewBest: true,
+            bestRank: 1,
+            playerCount: 5,
+          ),
+        ),
+      );
+      expect(find.text('New Record'), findsOneWidget);
+    });
+
+    testWidgets('while recording, and after a failure, bests are unknown', (
+      tester,
+    ) async {
+      await show(tester, const RankingPending());
+      expect(find.text('00700'), findsOneWidget);
+      expect(find.text(ResultPopup.unknownScore), findsOneWidget);
+      expect(find.text(ResultPopup.recordingNote), findsNWidgets(2));
+
+      await show(tester, const RankingFailed());
+      expect(find.text('00700'), findsOneWidget);
+      expect(find.text(ResultPopup.unknownScore), findsOneWidget);
+      expect(find.text(ResultPopup.failedNote), findsNWidgets(2));
+      expect(find.byType(NewRecordBubble), findsNothing);
+    });
+
+    testWidgets('a guest sees that nothing is recorded', (tester) async {
+      await show(tester, const RankingGuest());
+      expect(find.text('00700'), findsOneWidget);
+      expect(find.text(ResultPopup.guestNote), findsOneWidget);
+      expect(find.text(ResultPopup.unknownScore), findsOneWidget);
+    });
+
+    testWidgets('notes never wrap on their own', (tester) async {
+      for (final ranking in [
+        const RankingPending(),
+        const RankingFailed(),
+        const RankingGuest(),
+      ]) {
+        await show(tester, ranking);
+        for (final text in tester.widgetList<Text>(find.byType(Text))) {
+          if (text.data == null || !text.data!.contains('\n')) continue;
+          expect(text.softWrap, isFalse, reason: text.data);
+        }
+      }
+    });
+
+    testWidgets('buttons call back', (tester) async {
+      var retries = 0;
+      var titles = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: ResultPopup(
+              score: 700,
+              ranking: recorded,
+              onRetry: () => retries++,
+              onTitle: () => titles++,
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('もう一度'));
+      await tester.tap(find.text('タイトルへ'));
+      await tester.pumpAndSettle();
+      expect((retries, titles), (1, 1));
+    });
   });
 }

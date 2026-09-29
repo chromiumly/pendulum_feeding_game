@@ -44,10 +44,15 @@ class _Placement {
 /// Advances only in fixed steps of [GameConfig.fixedDt] via [step]; it knows
 /// nothing about Flame, rendering or real time.
 class GameSession {
-  GameSession({this.config = const GameConfig(), math.Random? random})
-    : _random = random ?? math.Random(),
-      _pendulum = DoublePendulum(config.pendulumParams),
-      _pendulumState = config.pendulumInitialState {
+  /// [placedPendulum] starts the setup screen from an earlier placement
+  /// instead of [GameConfig.pendulumInitialState].
+  GameSession({
+    this.config = const GameConfig(),
+    math.Random? random,
+    PendulumState? placedPendulum,
+  }) : _random = random ?? math.Random(),
+       _pendulum = DoublePendulum(config.pendulumParams),
+       _pendulumState = placedPendulum ?? config.pendulumInitialState {
     _pendulumPositions = _pendulum.positions(
       _pendulumState,
       config.pendulumOrigin,
@@ -64,6 +69,7 @@ class GameSession {
   late Food _food;
   Aim? _aim;
   _Placement? _placement;
+  PendulumState? _placedPendulum;
   int _score = 0;
   int _countdownElapsedSteps = 0;
   int _elapsedSteps = 0;
@@ -71,6 +77,18 @@ class GameSession {
   final List<GameEvent> _events = [];
 
   PendulumState get pendulumState => _pendulumState;
+
+  /// The pendulum as placed on the setup screen, at rest (without the start
+  /// speed), e.g. to place it the same way again on a retry. Fixed once the
+  /// countdown starts.
+  PendulumState get placedPendulum =>
+      _placedPendulum ??
+      PendulumState(
+        upperTheta: _pendulumState.upperTheta,
+        lowerTheta: _pendulumState.lowerTheta,
+        upperOmega: 0,
+        lowerOmega: 0,
+      );
   PendulumPositions get pendulumPositions => _pendulumPositions;
   Food get food => _food;
   Aim? get aim => _aim;
@@ -197,6 +215,7 @@ class GameSession {
   void startCountdown() {
     if (_phase != GamePhase.setup) return;
     _placement = null;
+    _placedPendulum = placedPendulum;
     final params = config.pendulumParams;
     final state = _pendulumState;
     final omegas = startOmegas(

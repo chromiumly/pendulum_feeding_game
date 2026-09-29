@@ -93,3 +93,75 @@ class _TileButtonState extends State<TileButton> {
     );
   }
 }
+
+/// Small cream tile with only an icon: the in-game retry (Figma: ゲーム画面).
+class IconTileButton extends StatefulWidget {
+  const IconTileButton({
+    super.key,
+    required this.icon,
+    required this.iconSize,
+    required this.semanticLabel,
+    required this.onPressed,
+  });
+
+  static const size = 60.0;
+
+  /// SVG asset path, drawn at [iconSize] in the centre.
+  final String icon;
+  final Size iconSize;
+  final String semanticLabel;
+  final VoidCallback onPressed;
+
+  @override
+  State<IconTileButton> createState() => _IconTileButtonState();
+}
+
+class _IconTileButtonState extends State<IconTileButton> {
+  bool _pressed = false;
+
+  void _setPressed(bool pressed) {
+    if (_pressed != pressed) setState(() => _pressed = pressed);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      label: widget.semanticLabel,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTapDown: (_) => _setPressed(true),
+        onTapUp: (_) => _setPressed(false),
+        onTapCancel: () => _setPressed(false),
+        onTap: widget.onPressed,
+        child: AnimatedScale(
+          scale: _pressed ? 0.9 : 1,
+          duration: const Duration(milliseconds: 80),
+          child: Container(
+            width: IconTileButton.size,
+            height: IconTileButton.size,
+            decoration: BoxDecoration(
+              color: Palette.tile,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x80000000),
+                  offset: Offset(0, 5),
+                  blurRadius: 10,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: SvgPicture.asset(
+              widget.icon,
+              width: widget.iconSize.width,
+              height: widget.iconSize.height,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ranking/ranking_service.dart';
 import '../ui/assets.dart';
 import '../ui/text_styles.dart';
 import '../ui/widgets/outlined_text.dart';
@@ -9,7 +10,9 @@ import 'game_screen.dart';
 import 'how_to_play_popup.dart';
 
 class TitleScreen extends StatefulWidget {
-  const TitleScreen({super.key});
+  const TitleScreen({super.key, this.ranking});
+
+  final RankingService? ranking;
 
   @override
   State<TitleScreen> createState() => _TitleScreenState();
@@ -38,7 +41,9 @@ class _TitleScreenState extends State<TitleScreen>
 
   void _start() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const GameScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => GameScreen(ranking: widget.ranking),
+      ),
     );
   }
 

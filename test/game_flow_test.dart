@@ -3,6 +3,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/app/app.dart';
+import 'package:pendulum_feeding_game/app/result_popup.dart';
 import 'package:pendulum_feeding_game/game/flame/components/stage_components.dart';
 import 'package:pendulum_feeding_game/game/flame/pendulum_feeding_game.dart';
 import 'package:pendulum_feeding_game/game/model/game_session.dart';
@@ -77,7 +78,7 @@ void main() {
       expect(find.text('TAP TO START'), findsNothing);
 
       // Setup waits for the スタート button.
-      expect(find.text('位置を決めたらスタート！'), findsOneWidget);
+      expect(find.text('花嫁と支点の位置を決めよう！'), findsOneWidget);
       await runSeconds(5);
       await tester.tap(find.text('スタート'));
       await tester.pump();
@@ -92,14 +93,16 @@ void main() {
       await runSeconds(18);
       expect(find.text('もう一度'), findsNothing);
       await runSeconds(2);
-      expect(find.text('SCORE'), findsOneWidget);
+      expect(find.text('今回のスコア'), findsOneWidget);
+      // No ranking service in this test: a guest.
+      expect(find.text(ResultPopup.guestNote), findsOneWidget);
       expect(find.text('もう一度'), findsOneWidget);
 
       // Retry starts a fresh game from the setup screen.
       await tester.tap(find.text('もう一度'));
       await runSeconds(1);
       expect(find.text('もう一度'), findsNothing);
-      expect(find.text('位置を決めたらスタート！'), findsOneWidget);
+      expect(find.text('花嫁と支点の位置を決めよう！'), findsOneWidget);
       await tester.tap(find.text('スタート'));
       await runSeconds(24);
       expect(find.text('もう一度'), findsOneWidget);
@@ -208,5 +211,47 @@ void main() {
     expect(groom.current, GroomPose.throwing);
     await frames(20); // 3 frames x 0.08 s, plus a margin.
     expect(groom.current, GroomPose.hold);
+  });
+
+  testWidgets('giving up mid-game returns to setup with the same placement', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    Future<void> frames(int count) async {
+      for (var i = 0; i < count; i++) {
+        await tester.pump(const Duration(microseconds: 16667));
+      }
+    }
+
+    PendulumFeedingGame currentGame() => tester
+        .widget<GameWidget<PendulumFeedingGame>>(
+          find.byType(GameWidget<PendulumFeedingGame>),
+        )
+        .game!;
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    await tester.tap(find.text('TAP TO START'));
+    await _waitForSprites(tester);
+
+    // Not on the setup screen.
+    expect(find.bySemanticsLabel('やり直す'), findsNothing);
+    final first = currentGame();
+    final placed = first.session.placedPendulum;
+
+    await tester.tap(find.text('スタート'));
+    await frames(300); // Countdown, then a few seconds of play.
+    expect(first.session.phase, GamePhase.playing);
+    expect(find.text('花嫁と支点の位置を決めよう！'), findsNothing);
+
+    await tester.tap(find.bySemanticsLabel('やり直す'));
+    await frames(2);
+    final second = currentGame();
+    expect(identical(second, first), isFalse);
+    expect(second.session.phase, GamePhase.setup);
+    expect(second.session.pendulumState.toList(), placed.toList());
+    expect(find.text('花嫁と支点の位置を決めよう！'), findsOneWidget);
   });
 }

@@ -21,16 +21,6 @@ Paint _stroke(Color color, double width) => Paint()
 /// hold no gameplay state of their own. World coordinates equal the 844x390
 /// stage (Figma) coordinates. Sizes and anchors come from the Figma layout.
 
-class BackgroundComponent extends SpriteComponent
-    with HasGameReference<FlameGame> {
-  BackgroundComponent(Vec2 size) : super(size: Vector2(size.x, size.y));
-
-  @override
-  Future<void> onLoad() async {
-    sprite = await game.loadSprite(GameAssets.background);
-  }
-}
-
 /// Rods and the two pivots: the fixed one and the middle joint, which the
 /// player drags on the setup screen. The lower node is the bride's swing
 /// seat, so it has no pivot.

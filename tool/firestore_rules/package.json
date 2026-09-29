@@ -1,0 +1,14 @@
+{
+  "name": "pendulum-feeding-game-firestore-rules",
+  "private": true,
+  "description": "Tests for ../../firestore.rules on the Firestore emulator.",
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --config ../../firebase.json --only firestore --project demo-pendulum-feeding-game \"node --test test/*.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.0",
+    "firebase": "^11.0.0",
+    "firebase-tools": "^14.0.0"
+  }
+}

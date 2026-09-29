@@ -47,3 +47,21 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 CLAUDE.md
+
+# Firebase admin credentials: never commit. The service account key lives in
+# .firebase/ (used by tool/ranking scripts); the extra patterns catch keys
+# saved elsewhere by mistake.
+.firebase/
+*-firebase-adminsdk-*.json
+service-account*.json
+
+# Generated player IDs and QR URLs: the IDs are secrets (anyone with an ID
+# can submit scores as that player).
+tool/ranking/out/
+
+# Firebase emulator logs and data
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase-emulator-data/
+node_modules/

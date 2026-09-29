@@ -20,8 +20,8 @@ abstract final class Palette {
   /// Soft pale-gold glow on what can be dragged on the setup screen.
   static const setupGlow = Color(0xFFE8C872);
 
-  /// Setup-screen hints and drag handles.
-  static const accentRed = Color(0xFFFF383C);
+  /// Setup-screen hint and the "New Record" bubble.
+  static const accentRed = Color(0xFFE65555);
 
   /// Area outside the 844x390 stage on screens with another aspect ratio.
   static const letterbox = Color(0xFF202020);

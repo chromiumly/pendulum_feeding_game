@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app/app.dart';
+import 'ranking/firebase_setup.dart';
+import 'ranking/firestore_ranking_repository.dart';
+import 'ranking/ranking_service.dart';
+import 'ranking/ranking_storage.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,5 +16,14 @@ void main() {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(const PendulumFeedingApp());
+
+  // The player ID comes with the URL of the guest's QR code.
+  final ranking = RankingService(
+    repository: FirestoreRankingRepository(lazyFirestore()),
+    storage: SharedPreferencesRankingStorage(),
+    launchUri: Uri.base,
+  );
+  unawaited(ranking.start());
+
+  runApp(PendulumFeedingApp(ranking: ranking));
 }
