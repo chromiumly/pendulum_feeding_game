@@ -8,8 +8,9 @@
 //
 //   dart run tool/ranking/player_ids.dart register [--emulator]
 //       Registers every ID in players.csv, using the service account key in
-//       .firebase/. Registering an ID again is harmless. With --emulator it
-//       writes to a local Firestore emulator (localhost:8080) instead.
+//       .firebase/. Registering an ID again is harmless: it keeps the
+//       player's game count. With --emulator it writes to a local
+//       Firestore emulator (localhost:8080) instead.
 //
 // tool/ranking/out/ and .firebase/ are git-ignored: IDs are secrets (anyone
 // with an ID can record games as that player) and so is the key. Which ID
@@ -188,10 +189,13 @@ Future<void> _register({required bool emulator}) async {
         'writes': [
           for (final id in ids)
             {
+              // Creates the player if missing. The empty mask leaves the
+              // fields of a registered player (gamesPlayed) as they are.
               'update': {
                 'name': '$database/documents/players/$id',
                 'fields': <String, Object>{},
               },
+              'updateMask': {'fieldPaths': <String>[]},
             },
         ],
       }),

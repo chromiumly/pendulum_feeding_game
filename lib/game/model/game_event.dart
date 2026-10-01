@@ -11,10 +11,19 @@ class FoodLaunched extends GameEvent {
 }
 
 class FoodEaten extends GameEvent {
-  const FoodEaten({required this.mouthPosition, required this.points});
+  const FoodEaten({
+    required this.mouthPosition,
+    required this.points,
+    required this.combo,
+  });
 
   final Vec2 mouthPosition;
+
+  /// Including the combo bonus.
   final int points;
+
+  /// Foods eaten in a row, this one included.
+  final int combo;
 }
 
 class FoodMissed extends GameEvent {

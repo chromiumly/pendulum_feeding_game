@@ -2,8 +2,9 @@ import 'ranking_models.dart';
 
 /// Where finished games are recorded and ranked.
 abstract interface class RankingRepository {
-  /// Whether [playerId] is one of the registered player IDs.
-  Future<bool> isRegistered(String playerId);
+  /// The number of games recorded for [playerId], or null if it is not one
+  /// of the registered player IDs.
+  Future<int?> recordedGames(String playerId);
 
   /// Records [record], unless it has been recorded already (a retry), and
   /// returns its ranks.

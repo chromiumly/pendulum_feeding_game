@@ -383,7 +383,8 @@ void main() {
     final mouth = probe.mouthPosition;
     final config = GameConfig(
       foodSpawnPosition: mouth - const Vec2(0, 80),
-      foodTypes: const [FoodType(id: 'test', hitRadius: 10)],
+      foodTypes: const [FoodType(id: 'test', points: 100)],
+      foodHitRadius: 10,
     );
     final session = _session(config);
     _throw(session, const Vec2(0, 300));
@@ -398,6 +399,76 @@ void main() {
     expect(session.food.position, config.foodSpawnPosition);
     final events = session.takeEvents();
     expect(events.whereType<FoodEaten>(), hasLength(1));
+  });
+
+  group('combo', () {
+    // A still pendulum, so that every food dropped from the spawn point
+    // lands in the mouth.
+    const hanging = PendulumState(
+      upperTheta: 0,
+      lowerTheta: 0,
+      upperOmega: 0,
+      lowerOmega: 0,
+    );
+
+    GameSession comboSession() {
+      final probe = _session(
+        const GameConfig(
+          pendulumInitialState: hanging,
+          startEnergyTopMultiple: 0,
+        ),
+      );
+      return _session(
+        GameConfig(
+          pendulumInitialState: hanging,
+          startEnergyTopMultiple: 0,
+          foodSpawnPosition: probe.mouthPosition - const Vec2(0, 80),
+          foodTypes: const [FoodType(id: 'test', points: 100)],
+          foodHitRadius: 10,
+        ),
+      );
+    }
+
+    /// Throws [velocity] and steps until the food is eaten or missed.
+    GameEvent throwFood(GameSession session, Vec2 velocity) {
+      _throw(session, velocity);
+      for (var i = 0; i < 120; i++) {
+        session.step();
+        final events = session.takeEvents().where(
+          (e) => e is FoodEaten || e is FoodMissed,
+        );
+        if (events.isNotEmpty) return events.single;
+      }
+      fail('The food was neither eaten nor missed.');
+    }
+
+    FoodEaten eat(GameSession session) =>
+        throwFood(session, const Vec2(0, 300)) as FoodEaten;
+
+    void miss(GameSession session) =>
+        expect(throwFood(session, const Vec2(900, 0)), isA<FoodMissed>());
+
+    test('each food in a row is worth 0.2 x its points more', () {
+      final session = comboSession();
+      expect(session.combo, 0);
+      final eaten = [for (var i = 0; i < 3; i++) eat(session)];
+      expect([for (final e in eaten) e.combo], [1, 2, 3]);
+      expect([for (final e in eaten) e.points], [100, 120, 140]);
+      expect(session.combo, 3);
+      expect(session.score, 360);
+    });
+
+    test('a miss breaks the run', () {
+      final session = comboSession();
+      eat(session);
+      eat(session);
+      miss(session);
+      expect(session.combo, 0);
+      final next = eat(session);
+      expect(next.combo, 1);
+      expect(next.points, 100);
+      expect(session.score, 100 + 120 + 100);
+    });
   });
 
   test('food leaving the world is a miss and respawns', () {
@@ -484,7 +555,8 @@ void main() {
         pendulumInitialState: hanging,
         startEnergyTopMultiple: 0,
         foodSpawnPosition: probe.mouthPosition - const Vec2(0, 150),
-        foodTypes: const [FoodType(id: 'test', hitRadius: 10)],
+        foodTypes: const [FoodType(id: 'test', points: 100)],
+        foodHitRadius: 10,
       );
       final session = _session(config);
       final limit = config.timeLimitSteps;

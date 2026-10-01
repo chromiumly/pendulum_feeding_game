@@ -55,6 +55,7 @@ dev_dependencies:
   qr: ^4.0.0
   googleapis_auth: ^2.3.4
   http: ^1.6.0
+  image: ^4.10.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -70,6 +71,7 @@ flutter:
   assets:
     - assets/images/background/
     - assets/images/bride/
+    - assets/images/food/
     - assets/images/groom/
     - assets/images/pendulum/
     - assets/icons/

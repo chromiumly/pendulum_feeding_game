@@ -17,6 +17,10 @@ Paint _stroke(Color color, double width) => Paint()
   ..style = PaintingStyle.stroke
   ..strokeWidth = width;
 
+/// For drawing images. The images are larger than drawn, and without
+/// filtering, downscaling makes their fine texture look rough.
+Paint _imagePaint() => Paint()..filterQuality = FilterQuality.medium;
+
 /// The following components only draw the current [GameSession] state; they
 /// hold no gameplay state of their own. World coordinates equal the 844x390
 /// stage (Figma) coordinates. Sizes and anchors come from the Figma layout.
@@ -40,6 +44,7 @@ class PendulumComponent extends Component with HasGameReference<FlameGame> {
 
   final _rodPaint = _stroke(Palette.darkBrown, 3)..strokeCap = StrokeCap.round;
   final _jointGlow = _SetupGlow(sigma: 4);
+  final _pivotPaint = _imagePaint();
   Sprite? _pivot;
 
   @override
@@ -79,6 +84,7 @@ class PendulumComponent extends Component with HasGameReference<FlameGame> {
         position: center,
         size: _pivotSize,
         anchor: Anchor.center,
+        overridePaint: _pivotPaint,
       );
     }
   }
@@ -87,7 +93,8 @@ class PendulumComponent extends Component with HasGameReference<FlameGame> {
 /// The bride hangs from the lower node by her swing seat and is rotated by
 /// -lowerTheta, like the mouth position in the rules.
 class BrideComponent extends SpriteComponent with HasGameReference<FlameGame> {
-  BrideComponent(this.session) : super(size: spriteSize, anchor: seatAnchor);
+  BrideComponent(this.session)
+    : super(size: spriteSize, anchor: seatAnchor, paint: _imagePaint());
 
   final GameSession session;
 
@@ -211,6 +218,7 @@ class GroomComponent extends SpriteAnimationGroupComponent<GroomPose>
     : super(
         size: spriteSize,
         anchor: feetAnchor,
+        paint: _imagePaint(),
         position: Vector2(
           session.config.groomPosition.x,
           session.config.groomPosition.y,
@@ -272,27 +280,42 @@ class GroomComponent extends SpriteAnimationGroupComponent<GroomPose>
   }
 }
 
-/// Dummy food: a 40 px circle coloured by food type. Like the groom who
-/// holds it, it is not shown on the setup screen.
-class FoodComponent extends Component {
+/// The food image, centred on the food. Images are loaded for every food
+/// type up front, so that a new food never waits for its image. Like the
+/// groom who holds it, it is not shown on the setup screen.
+class FoodComponent extends Component with HasGameReference<FlameGame> {
   FoodComponent(this.session);
 
   final GameSession session;
 
-  static const radius = 20.0;
+  final _sprites = <String, Sprite>{};
 
-  final _fillPaint = Paint();
-  final _edgePaint = _stroke(const Color(0xFF000000), 1);
+  final _paint = _imagePaint();
+
+  @override
+  Future<void> onLoad() async {
+    final types = session.config.foodTypes;
+    final sprites = await Future.wait([
+      for (final type in types) game.loadSprite(GameAssets.food(type.id)),
+    ]);
+    for (var i = 0; i < types.length; i++) {
+      _sprites[types[i].id] = sprites[i];
+    }
+  }
 
   @override
   void render(Canvas canvas) {
     if (session.phase == GamePhase.setup) return;
     final food = session.food;
-    final center = _offset(food.position);
-    _fillPaint.color = StageStyle.food(food.type.id);
-    canvas
-      ..drawCircle(center, radius, _fillPaint)
-      ..drawCircle(center, radius - 0.5, _edgePaint);
+    final sprite = _sprites[food.type.id];
+    if (sprite == null) return;
+    sprite.render(
+      canvas,
+      position: Vector2(food.position.x, food.position.y),
+      size: sprite.srcSize / GameAssets.foodImageDensity.toDouble(),
+      anchor: Anchor.center,
+      overridePaint: _paint,
+    );
   }
 }
 
@@ -313,7 +336,7 @@ class HitCirclesComponent extends Component {
     if (session.phase == GamePhase.setup) return; // Food is hidden.
     canvas.drawCircle(
       _offset(session.food.position),
-      session.food.type.hitRadius,
+      session.config.foodHitRadius,
       _paint,
     );
   }

@@ -36,6 +36,7 @@ class RankingResult {
     required this.isNewBest,
     required this.bestRank,
     required this.playerCount,
+    required this.gamesPlayed,
   });
 
   /// This game's score, and its rank among all recorded games.
@@ -48,6 +49,9 @@ class RankingResult {
   final bool isNewBest;
   final int bestRank;
   final int playerCount;
+
+  /// The player's recorded games, this one included.
+  final int gamesPlayed;
 }
 
 /// What the result popup can say about the ranking.

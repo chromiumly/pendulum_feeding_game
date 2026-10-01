@@ -10,12 +10,19 @@ const _id = 'k7q2xm9pa4c8r3tw';
 class FakeRankingRepository implements RankingRepository {
   final registered = <String>{_id};
   final recorded = <String, PlayRecord>{};
+
+  /// Games recorded per player before [recorded], e.g. from another device.
+  final earlierGames = <String, int>{};
   bool offline = false;
 
+  int _games(String playerId) =>
+      (earlierGames[playerId] ?? 0) +
+      recorded.values.where((r) => r.playerId == playerId).length;
+
   @override
-  Future<bool> isRegistered(String playerId) async {
+  Future<int?> recordedGames(String playerId) async {
     if (offline) throw Exception('offline');
-    return registered.contains(playerId);
+    return registered.contains(playerId) ? _games(playerId) : null;
   }
 
   @override
@@ -33,6 +40,7 @@ class FakeRankingRepository implements RankingRepository {
       isNewBest: true,
       bestRank: 1,
       playerCount: 1,
+      gamesPlayed: _games(record.playerId),
     );
   }
 }
@@ -152,5 +160,83 @@ void main() {
     for (final id in repository.recorded.keys) {
       expect(id, matches(r'^[A-Za-z0-9]{20}$'));
     }
+  });
+
+  group('gamesPlayed', () {
+    test('is 0 for a guest', () async {
+      final ranking = service('https://example.com/');
+      await ranking.start();
+      await ranking.recordGame(500);
+      expect(ranking.gamesPlayed, 0);
+    });
+
+    test('comes from the storage at start, and is remembered', () async {
+      repository.earlierGames[_id] = 4;
+      final ranking = service();
+      await ranking.start();
+      expect(ranking.gamesPlayed, 4);
+      expect(storage.recordedGames[_id], 4);
+    });
+
+    test('offline at start, is what was recorded when last heard', () async {
+      storage.recordedGames[_id] = 4;
+      repository.offline = true;
+      final ranking = service();
+      await ranking.start();
+      expect(ranking.gamesPlayed, 4);
+    });
+
+    test('counts a game as soon as it is being recorded', () async {
+      final ranking = service();
+      await ranking.start();
+      final recording = ranking.recordGame(800);
+      expect(ranking.gamesPlayed, 1);
+      await recording;
+      expect(ranking.gamesPlayed, 1);
+      await ranking.recordGame(900);
+      expect(ranking.gamesPlayed, 2);
+    });
+
+    test('counts games kept on the device, but not twice once sent', () async {
+      repository.earlierGames[_id] = 2;
+      final ranking = service();
+      await ranking.start();
+      repository.offline = true;
+      await ranking.recordGame(700);
+      await ranking.recordGame(600);
+      expect(storage.pending, hasLength(2));
+      expect(ranking.gamesPlayed, 4);
+
+      repository.offline = false;
+      await ranking.recordGame(900);
+      expect(storage.pending, isEmpty);
+      expect(ranking.gamesPlayed, 5);
+      expect(storage.recordedGames[_id], 5);
+    });
+
+    test('counts games left from before at start', () async {
+      storage.recordedGames[_id] = 1;
+      storage.pending = [
+        const PlayRecord(playId: 'old-play-1', playerId: _id, score: 500),
+      ];
+      repository.offline = true;
+      final ranking = service();
+      await ranking.start();
+      expect(ranking.gamesPlayed, 2);
+    });
+
+    test('does not count another player\'s games left on the device', () async {
+      storage.pending = [
+        const PlayRecord(
+          playId: 'old-play-1',
+          playerId: 'z9y8x7w6v5u4t3s2',
+          score: 500,
+        ),
+      ];
+      repository.offline = true;
+      final ranking = service();
+      await ranking.start();
+      expect(ranking.gamesPlayed, 0);
+    });
   });
 }

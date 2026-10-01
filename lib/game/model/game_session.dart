@@ -46,11 +46,23 @@ class _Placement {
 class GameSession {
   /// [placedPendulum] starts the setup screen from an earlier placement
   /// instead of [GameConfig.pendulumInitialState].
+  ///
+  /// [gamesPlayed] is the number of games the player has finished before; it
+  /// favours the bride's favourites in the food draw for the whole game.
   GameSession({
     this.config = const GameConfig(),
     math.Random? random,
     PendulumState? placedPendulum,
+    int gamesPlayed = 0,
   }) : _random = random ?? math.Random(),
+       foodTypeProbabilities = foodProbabilities(
+         count: config.foodTypes.length,
+         bias: favouriteBias(
+           gamesPlayed: gamesPlayed,
+           limit: config.favouriteBiasLimit,
+           halfPlays: config.favouriteBiasHalfPlays,
+         ),
+       ),
        _pendulum = DoublePendulum(config.pendulumParams),
        _pendulumState = placedPendulum ?? config.pendulumInitialState {
     _pendulumPositions = _pendulum.positions(
@@ -62,6 +74,9 @@ class GameSession {
 
   final GameConfig config;
   final math.Random _random;
+
+  /// Probability of each of [GameConfig.foodTypes] in this game.
+  final List<double> foodTypeProbabilities;
   final DoublePendulum _pendulum;
 
   PendulumState _pendulumState;
@@ -71,6 +86,7 @@ class GameSession {
   _Placement? _placement;
   PendulumState? _placedPendulum;
   int _score = 0;
+  int _combo = 0;
   int _countdownElapsedSteps = 0;
   int _elapsedSteps = 0;
   GamePhase _phase = GamePhase.setup;
@@ -93,6 +109,9 @@ class GameSession {
   Food get food => _food;
   Aim? get aim => _aim;
   int get score => _score;
+
+  /// Foods eaten in a row; a food that leaves the world breaks the run.
+  int get combo => _combo;
   GamePhase get phase => _phase;
   bool get isFinished => _phase == GamePhase.finished;
 
@@ -327,11 +346,13 @@ class GameSession {
       from: previous,
       to: _food.position,
       center: mouth,
-      radiusSum: _food.type.hitRadius + config.brideMouthRadius,
+      radiusSum: config.foodHitRadius + config.brideMouthRadius,
     )) {
-      _score += config.pointsPerFood;
+      _combo++;
+      final points = comboPoints(basePoints: _food.type.points, combo: _combo);
+      _score += points;
       _events.add(
-        FoodEaten(mouthPosition: mouth, points: config.pointsPerFood),
+        FoodEaten(mouthPosition: mouth, points: points, combo: _combo),
       );
       _food = _spawnFood();
       return;
@@ -339,9 +360,10 @@ class GameSession {
 
     if (isOutOfWorld(
       position: _food.position,
-      radius: _food.type.hitRadius,
+      radius: config.foodHitRadius,
       worldSize: config.worldSize,
     )) {
+      _combo = 0;
       _events.add(const FoodMissed());
       _food = _spawnFood();
     }
@@ -361,7 +383,7 @@ class GameSession {
   Food _spawnFood() {
     final types = config.foodTypes;
     return Food(
-      type: types[_random.nextInt(types.length)],
+      type: types[drawIndex(foodTypeProbabilities, _random)],
       position: config.foodSpawnPosition,
     );
   }

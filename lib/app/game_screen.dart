@@ -39,7 +39,10 @@ class _GameScreenState extends State<GameScreen> {
   PendulumFeedingGame _newGame([PendulumState? placedPendulum]) {
     late final PendulumFeedingGame game;
     game = PendulumFeedingGame(
-      session: GameSession(placedPendulum: placedPendulum),
+      session: GameSession(
+        placedPendulum: placedPendulum,
+        gamesPlayed: widget.ranking?.gamesPlayed ?? 0,
+      ),
       onGameFinished: (score) => _record(game, score),
     );
     return game;

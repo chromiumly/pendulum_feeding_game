@@ -102,6 +102,7 @@ void main() {
         isNewBest: false,
         bestRank: 12,
         playerCount: 41,
+        gamesPlayed: 6,
       ),
     );
 
@@ -128,6 +129,7 @@ void main() {
             isNewBest: true,
             bestRank: 1,
             playerCount: 5,
+            gamesPlayed: 3,
           ),
         ),
       );

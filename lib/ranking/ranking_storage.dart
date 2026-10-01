@@ -4,13 +4,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ranking_models.dart';
 
-/// What the ranking keeps on the device: the player ID, and finished games
-/// not yet recorded (so that none is lost when the network is down).
+/// What the ranking keeps on the device: the player ID, finished games not
+/// yet recorded (so that none is lost when the network is down), and how
+/// many games of a player were recorded when last heard (to know it
+/// offline).
 abstract interface class RankingStorage {
   Future<String?> loadPlayerId();
   Future<void> savePlayerId(String playerId);
   Future<List<PlayRecord>> loadPending();
   Future<void> savePending(List<PlayRecord> records);
+  Future<int?> loadRecordedGames(String playerId);
+  Future<void> saveRecordedGames(String playerId, int count);
 }
 
 /// [RankingStorage] in shared_preferences (localStorage on the web).
@@ -22,6 +26,8 @@ class SharedPreferencesRankingStorage implements RankingStorage {
 
   static const _playerIdKey = 'ranking.playerId';
   static const _pendingKey = 'ranking.pending';
+  static String _recordedGamesKey(String playerId) =>
+      'ranking.recordedGames.$playerId';
 
   @override
   Future<String?> loadPlayerId() => _preferences.getString(_playerIdKey);
@@ -49,12 +55,21 @@ class SharedPreferencesRankingStorage implements RankingStorage {
     _pendingKey,
     jsonEncode([for (final record in records) record.toJson()]),
   );
+
+  @override
+  Future<int?> loadRecordedGames(String playerId) =>
+      _preferences.getInt(_recordedGamesKey(playerId));
+
+  @override
+  Future<void> saveRecordedGames(String playerId, int count) =>
+      _preferences.setInt(_recordedGamesKey(playerId), count);
 }
 
 /// [RankingStorage] in memory, for tests.
 class MemoryRankingStorage implements RankingStorage {
   String? playerId;
   List<PlayRecord> pending = [];
+  final recordedGames = <String, int>{};
 
   @override
   Future<String?> loadPlayerId() async => playerId;
@@ -68,4 +83,12 @@ class MemoryRankingStorage implements RankingStorage {
   @override
   Future<void> savePending(List<PlayRecord> records) async =>
       pending = List.of(records);
+
+  @override
+  Future<int?> loadRecordedGames(String playerId) async =>
+      recordedGames[playerId];
+
+  @override
+  Future<void> saveRecordedGames(String playerId, int count) async =>
+      recordedGames[playerId] = count;
 }

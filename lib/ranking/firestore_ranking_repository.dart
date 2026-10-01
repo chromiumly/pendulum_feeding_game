@@ -21,11 +21,14 @@ class FirestoreRankingRepository implements RankingRepository {
   static String bestKey(String playerId) =>
       sha256.convert(utf8.encode(playerId)).toString();
 
+  static int _gamesPlayed(DocumentSnapshot<Map<String, dynamic>> player) =>
+      (player.data()?['gamesPlayed'] as num?)?.toInt() ?? 0;
+
   @override
-  Future<bool> isRegistered(String playerId) async {
+  Future<int?> recordedGames(String playerId) async {
     final db = await _firestore();
     final player = await db.collection('players').doc(playerId).get();
-    return player.exists;
+    return player.exists ? _gamesPlayed(player) : null;
   }
 
   @override
@@ -34,13 +37,14 @@ class FirestoreRankingRepository implements RankingRepository {
     final scores = db.collection('scores');
     final bests = db.collection('bests');
     final bestRef = bests.doc(bestKey(record.playerId));
+    final playerRef = db.collection('players').doc(record.playerId);
 
-    final ({int best, bool isNewBest}) best;
+    final ({int best, bool isNewBest, int gamesPlayed}) written;
     try {
       final recorded = await scores.doc(record.playId).get();
-      best = recorded.exists
-          ? await _bestOf(bestRef, record)
-          : await _write(db, record, bestRef);
+      written = recorded.exists
+          ? await _recordedBefore(bestRef, playerRef, record)
+          : await _write(db, record, bestRef, playerRef);
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') throw RecordRejectedException(e);
       rethrow;
@@ -49,30 +53,36 @@ class FirestoreRankingRepository implements RankingRepository {
     final counts = await Future.wait([
       _count(scores.where('score', isGreaterThan: record.score)),
       _count(scores),
-      _count(bests.where('best', isGreaterThan: best.best)),
+      _count(bests.where('best', isGreaterThan: written.best)),
       _count(bests),
     ]);
     return RankingResult(
       score: record.score,
       playRank: counts[0] + 1,
       playCount: counts[1],
-      best: best.best,
-      isNewBest: best.isNewBest,
+      best: written.best,
+      isNewBest: written.isNewBest,
       bestRank: counts[2] + 1,
       playerCount: counts[3],
+      gamesPlayed: written.gamesPlayed,
     );
   }
 
-  /// Records a new game: plays and scores, and bests when it is a new best,
-  /// all in one transaction as firestore.rules requires.
-  Future<({int best, bool isNewBest})> _write(
+  /// Records a new game: plays and scores, the player's game count, and
+  /// bests when it is a new best, all in one transaction as firestore.rules
+  /// requires.
+  Future<({int best, bool isNewBest, int gamesPlayed})> _write(
     FirebaseFirestore db,
     PlayRecord record,
     DocumentReference<Map<String, dynamic>> bestRef,
+    DocumentReference<Map<String, dynamic>> playerRef,
   ) {
     return db.runTransaction((transaction) async {
+      final player = await transaction.get(playerRef);
+      if (!player.exists) throw const RecordRejectedException();
       final previous = await transaction.get(bestRef);
       final previousBest = (previous.data()?['best'] as num?)?.toInt();
+      final gamesPlayed = _gamesPlayed(player) + 1;
       transaction
         ..set(db.collection('plays').doc(record.playId), {
           'playerId': record.playerId,
@@ -81,24 +91,34 @@ class FirestoreRankingRepository implements RankingRepository {
         })
         ..set(db.collection('scores').doc(record.playId), {
           'score': record.score,
+        })
+        ..update(playerRef, {
+          'gamesPlayed': gamesPlayed,
+          'lastPlayId': record.playId,
         });
       if (previousBest != null && record.score <= previousBest) {
-        return (best: previousBest, isNewBest: false);
+        return (best: previousBest, isNewBest: false, gamesPlayed: gamesPlayed);
       }
       transaction.set(bestRef, {'best': record.score, 'playId': record.playId});
-      return (best: record.score, isNewBest: true);
+      return (best: record.score, isNewBest: true, gamesPlayed: gamesPlayed);
     });
   }
 
-  /// The best of a player whose game was recorded before (a retry after a
-  /// lost reply). It was a new best if the best still points at it.
-  Future<({int best, bool isNewBest})> _bestOf(
+  /// The best and game count of a player whose game was recorded before (a
+  /// retry after a lost reply). It was a new best if the best still points
+  /// at it.
+  Future<({int best, bool isNewBest, int gamesPlayed})> _recordedBefore(
     DocumentReference<Map<String, dynamic>> bestRef,
+    DocumentReference<Map<String, dynamic>> playerRef,
     PlayRecord record,
   ) async {
-    final data = (await bestRef.get()).data();
-    final best = (data?['best'] as num?)?.toInt() ?? record.score;
-    return (best: best, isNewBest: data?['playId'] == record.playId);
+    final (best, player) = await (bestRef.get(), playerRef.get()).wait;
+    final data = best.data();
+    return (
+      best: (data?['best'] as num?)?.toInt() ?? record.score,
+      isNewBest: data?['playId'] == record.playId,
+      gamesPlayed: _gamesPlayed(player),
+    );
   }
 
   static Future<int> _count(Query<Map<String, dynamic>> query) async =>

@@ -55,7 +55,8 @@ void main() {
       pendulumInitialState: hanging,
       startEnergyTopMultiple: 0,
       foodSpawnPosition: mouth - const Vec2(0, 150),
-      foodTypes: const [FoodType(id: 'test', hitRadius: 10)],
+      foodTypes: const [FoodType(id: 'test', points: 100)],
+      foodHitRadius: 10,
     );
     final session = _playingSession(config, stepsLeft: 10);
     const start = Vec2(400, 200);

@@ -46,10 +46,12 @@ class GameConfig {
     this.foodSpawnPosition = const Vec2(727, 216),
     this.foodGravity = const Vec2(0, 700),
     this.foodTypes = defaultFoodTypes,
+    this.foodHitRadius = 28,
+    this.favouriteBiasLimit = 3,
+    this.favouriteBiasHalfPlays = 5,
     this.launchScale = 4.0,
     this.maxLaunchSpeed = 900,
     this.minDragDistance = 12,
-    this.pointsPerFood = 100,
     this.countdownSeconds = 3,
     this.startCueSeconds = 0.8,
     this.startEnergyTopMultiple = 2.5,
@@ -92,6 +94,19 @@ class GameConfig {
 
   final List<FoodType> foodTypes;
 
+  /// Hit radius of every food [px]. A little larger than the food images,
+  /// which look like circles of about 47 px across (tool/food_images.dart),
+  /// to be forgiving.
+  final double foodHitRadius;
+
+  /// The more games a player has finished, the more often the bride's
+  /// favourites come (see `favouriteBias`). The bias approaches this limit,
+  /// at which the top 5 of 20 foods come 57% of the time instead of 25%.
+  final double favouriteBiasLimit;
+
+  /// Finished games after which the bias is half its limit.
+  final double favouriteBiasHalfPlays;
+
   /// Launch velocity per pixel of drag [1/s].
   final double launchScale;
 
@@ -100,8 +115,6 @@ class GameConfig {
 
   /// Shorter drags are treated as cancelled rather than as a throw.
   final double minDragDistance;
-
-  final int pointsPerFood;
 
   /// Length of the 3, 2, 1 countdown [s].
   final int countdownSeconds;
@@ -139,16 +152,27 @@ class GameConfig {
   int get startCueSteps => (startCueSeconds / fixedDt).round();
 }
 
-/// Hit radii are the prototype's values and are expected to be retuned.
+/// In the order of the bride's favourites, best first. The favourite scores
+/// 150 points, and each next one 5 fewer: 150 - 5 x (rank - 1).
 const defaultFoodTypes = [
-  FoodType(id: 'apple', hitRadius: 50),
-  FoodType(id: 'cake', hitRadius: 24),
-  FoodType(id: 'grape', hitRadius: 50),
-  FoodType(id: 'hamburger', hitRadius: 50),
-  FoodType(id: 'mont_blanc', hitRadius: 50),
-  FoodType(id: 'omelette_rice', hitRadius: 50),
-  FoodType(id: 'peach', hitRadius: 50),
-  FoodType(id: 'ramen', hitRadius: 50),
-  FoodType(id: 'sushi', hitRadius: 10),
-  FoodType(id: 'takoyaki', hitRadius: 50),
+  FoodType(id: 'parfait', points: 150), // 1. パフェ
+  FoodType(id: 'pino', points: 145), // 2. ピノ
+  FoodType(id: 'shrimp_tempura', points: 140), // 3. 海老の天ぷら
+  FoodType(id: 'melon_ice_cream', points: 135), // 4. メロンソフトクリーム
+  FoodType(id: 'hitsumabushi', points: 130), // 5. ひつまぶし
+  FoodType(id: 'mont_blanc', points: 125), // 6. モンブラン
+  FoodType(id: 'sushi', points: 120), // 7. お寿司
+  FoodType(id: 'chawan_mushi', points: 115), // 8. 茶碗蒸し
+  FoodType(id: 'ramen', points: 110), // 9. ラーメン
+  FoodType(id: 'gyoza', points: 105), // 10. 津餃子
+  FoodType(id: 'tapioka', points: 100), // 11. タピオカミルクティー
+  FoodType(id: 'muscat', points: 95), // 12. シャインマスカット
+  FoodType(id: 'donut', points: 90), // 13. ポンデリング
+  FoodType(id: 'omurice', points: 85), // 14. オムライス
+  FoodType(id: 'hamburger', points: 80), // 15. ハンバーガー
+  FoodType(id: 'nikuman', points: 75), // 16. 肉まん
+  FoodType(id: 'curry', points: 70), // 17. カレーライス
+  FoodType(id: 'tea', points: 65), // 18. 紅茶
+  FoodType(id: 'jagariko', points: 60), // 19. じゃがりこ
+  FoodType(id: 'sweet_potato', points: 55), // 20. 焼き芋
 ];

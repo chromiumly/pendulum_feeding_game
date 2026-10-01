@@ -16,6 +16,7 @@ import {
   getCountFromServer,
   getDoc,
   getDocs,
+  increment,
   query,
   serverTimestamp,
   setDoc,
@@ -60,8 +61,9 @@ beforeEach(async () => {
 });
 
 /**
- * Records a play the way the app does: plays + scores, and bests when
- * [best] is given. Individual fields can be overridden to test the rules.
+ * Records a play the way the app does: plays + scores + the player's
+ * gamesPlayed, and bests when [best] is given. Individual fields can be
+ * overridden to test the rules.
  */
 function recordPlay({
   playerId = PLAYER,
@@ -72,6 +74,7 @@ function recordPlay({
   scoreDoc = {},
   bestDoc = {},
   withScore = true,
+  playerUpdate = { gamesPlayed: increment(1), lastPlayId: playId },
 } = {}) {
   const batch = writeBatch(db);
   batch.set(doc(db, 'plays', playId), {
@@ -82,6 +85,9 @@ function recordPlay({
   });
   if (withScore) {
     batch.set(doc(db, 'scores', playId), { score, ...scoreDoc });
+  }
+  if (playerUpdate) {
+    batch.update(doc(db, 'players', playerId), playerUpdate);
   }
   if (best) {
     batch.set(doc(db, 'bests', best.key), {
@@ -103,10 +109,89 @@ describe('players', () => {
     if (missing.exists()) throw new Error('unregistered ID found');
   });
 
-  test('IDs cannot be listed or written', async () => {
+  test('IDs cannot be listed, created or deleted', async () => {
     await assertFails(getDocs(collection(db, 'players')));
     await assertFails(setDoc(doc(db, 'players', UNREGISTERED), {}));
     await assertFails(deleteDoc(doc(db, 'players', PLAYER)));
+  });
+
+  test('every play counts one game for its player', async () => {
+    const first = newPlayId();
+    await assertSucceeds(recordPlay({ playId: first }));
+    const second = newPlayId();
+    await assertSucceeds(recordPlay({ playId: second, best: null }));
+    const player = (await getDoc(doc(db, 'players', PLAYER))).data();
+    if (player.gamesPlayed !== 2 || player.lastPlayId !== second) {
+      throw new Error(JSON.stringify(player));
+    }
+  });
+
+  test('a play must be counted in its player\'s games', async () => {
+    await assertFails(recordPlay({ playerUpdate: null }));
+  });
+
+  test('the count goes up by exactly one', async () => {
+    const playId = newPlayId();
+    await assertFails(
+      recordPlay({ playId, playerUpdate: { gamesPlayed: 2, lastPlayId: playId } }),
+    );
+    await assertFails(
+      recordPlay({
+        playId,
+        playerUpdate: { gamesPlayed: increment(5), lastPlayId: playId },
+      }),
+    );
+    await assertSucceeds(
+      recordPlay({ playId, playerUpdate: { gamesPlayed: 1, lastPlayId: playId } }),
+    );
+  });
+
+  test('the count cannot go up without a new play', async () => {
+    const playId = newPlayId();
+    await assertSucceeds(recordPlay({ playId }));
+    await assertFails(
+      updateDoc(doc(db, 'players', PLAYER), {
+        gamesPlayed: increment(1),
+        lastPlayId: playId,
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(db, 'players', PLAYER), { gamesPlayed: 0 }),
+    );
+  });
+
+  test('a play cannot count for another player', async () => {
+    const playId = newPlayId();
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'plays', playId), {
+      playerId: PLAYER,
+      score: 1200,
+      createdAt: serverTimestamp(),
+    });
+    batch.set(doc(db, 'scores', playId), { score: 1200 });
+    batch.update(doc(db, 'players', PLAYER), {
+      gamesPlayed: increment(1),
+      lastPlayId: playId,
+    });
+    batch.update(doc(db, 'players', OTHER), {
+      gamesPlayed: increment(1),
+      lastPlayId: playId,
+    });
+    await assertFails(batch.commit());
+  });
+
+  test('only the count can change', async () => {
+    const playId = newPlayId();
+    await assertFails(
+      recordPlay({
+        playId,
+        playerUpdate: {
+          gamesPlayed: increment(1),
+          lastPlayId: playId,
+          name: 'x',
+        },
+      }),
+    );
   });
 });
 
@@ -124,8 +209,8 @@ describe('recording a play', () => {
     await assertFails(recordPlay({ playerId: UNREGISTERED }));
   });
 
-  test('scores must be whole hundreds within range', async () => {
-    await assertFails(recordPlay({ score: 1250 }));
+  test('scores must be whole numbers within range', async () => {
+    await assertSucceeds(recordPlay({ score: 1262 }));
     await assertFails(recordPlay({ score: -100 }));
     await assertFails(recordPlay({ score: 100100 }));
     await assertFails(recordPlay({ score: 12.5 }));

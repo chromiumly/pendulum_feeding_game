@@ -5,6 +5,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/ranking/firestore_ranking_repository.dart';
 import 'package:pendulum_feeding_game/ranking/ranking_models.dart';
+import 'package:pendulum_feeding_game/ranking/ranking_repository.dart';
 
 // The fake does not enforce firestore.rules; those are tested on the
 // emulator in tool/firestore_rules.
@@ -22,8 +23,13 @@ void main() {
   setUp(() async {
     db = FakeFirebaseFirestore();
     repository = FirestoreRankingRepository(() async => db);
-    await db.collection('players').doc('aaaaaaaaaaaaaaaa').set({});
+    for (final id in ['aaaaaaaaaaaaaaaa', 'p1', 'p2', 'p3', 'p4', 'p5']) {
+      await db.collection('players').doc(id).set({});
+    }
   });
+
+  Future<Map<String, dynamic>> player(String id) async =>
+      (await db.collection('players').doc(id).get()).data()!;
 
   test('bestKey is the lowercase SHA-256 hex, as firestore.rules expects', () {
     const id = 'k7q2xm9pa4c8r3tw';
@@ -34,9 +40,9 @@ void main() {
     expect(FirestoreRankingRepository.bestKey(id), matches(r'^[0-9a-f]{64}$'));
   });
 
-  test('isRegistered checks players/', () async {
-    expect(await repository.isRegistered('aaaaaaaaaaaaaaaa'), isTrue);
-    expect(await repository.isRegistered('bbbbbbbbbbbbbbbb'), isFalse);
+  test('recordedGames is null for an unregistered ID', () async {
+    expect(await repository.recordedGames('aaaaaaaaaaaaaaaa'), 0);
+    expect(await repository.recordedGames('bbbbbbbbbbbbbbbb'), isNull);
   });
 
   test('a first game writes plays, scores and bests', () async {
@@ -117,5 +123,29 @@ void main() {
     // Still reported as the new best it was.
     expect((again.best, again.isNewBest), (1200, true));
     expect((again.playRank, again.playCount), (1, 1));
+  });
+
+  test('every new game counts in the player\'s games, once', () async {
+    final first = play('p1', 1200);
+    expect((await repository.record(first)).gamesPlayed, 1);
+    expect(await player('p1'), {'gamesPlayed': 1, 'lastPlayId': first.playId});
+
+    await repository.record(play('p2', 800));
+    final second = play('p1', 900);
+    expect((await repository.record(second)).gamesPlayed, 2);
+    expect(await repository.recordedGames('p1'), 2);
+    expect(await repository.recordedGames('p2'), 1);
+
+    // A retry reports the count without adding to it.
+    expect((await repository.record(first)).gamesPlayed, 2);
+    expect(await player('p1'), {'gamesPlayed': 2, 'lastPlayId': second.playId});
+  });
+
+  test('an unregistered player\'s game is rejected', () async {
+    await expectLater(
+      repository.record(play('bbbbbbbbbbbbbbbb', 1200)),
+      throwsA(isA<RecordRejectedException>()),
+    );
+    expect((await db.collection('plays').get()).docs, isEmpty);
   });
 }

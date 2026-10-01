@@ -133,4 +133,28 @@ void main() {
       expect(out(100, -1000), isFalse);
     });
   });
+
+  group('comboPoints', () {
+    test('adds 0.2 x the base points per food in a row, without limit', () {
+      int points(int combo) => comboPoints(basePoints: 150, combo: combo);
+      expect(points(1), 150);
+      expect(points(2), 180);
+      expect(points(6), 300);
+      expect(points(20), 720);
+      expect(points(50), 1620);
+    });
+
+    test('is whole for base points that are multiples of 5', () {
+      expect(comboPoints(basePoints: 135, combo: 2), 162);
+      for (var base = 5; base <= 150; base += 5) {
+        for (var combo = 1; combo <= 30; combo++) {
+          // Nothing is lost to the integer division.
+          expect(
+            comboPoints(basePoints: base, combo: combo) * 5,
+            base * (combo + 4),
+          );
+        }
+      }
+    });
+  });
 }

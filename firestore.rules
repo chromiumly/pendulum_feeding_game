@@ -2,9 +2,11 @@ rules_version = '2';
 
 // Ranking storage for 花嫁もぐもぐチャレンジ.
 //
-// players/{playerId}  Registered player IDs (from the QR codes). Written by
+// players/{playerId}  Registered player IDs (from the QR codes). Created by
 //                     the host's admin script only. A client may check its
-//                     own ID, but cannot list them.
+//                     own ID, but cannot list them. gamesPlayed counts the
+//                     player's plays (it makes the bride's favourites come
+//                     more often); lastPlayId is the play that counted last.
 // plays/{playId}      Every finished game: playerId, score, createdAt. Never
 //                     readable by clients; the host reads them in the
 //                     Firebase console.
@@ -14,9 +16,10 @@ rules_version = '2';
 //                     the player ID (which cannot be reversed): counted for
 //                     "挑戦者中 N位".
 //
-// A client records a game in one write: plays/{playId} and scores/{playId},
-// plus bests/{bestKey} when the score is a new best. scores and bests are
-// only accepted together with a new, valid play of a registered player, so
+// A client records a game in one write: plays/{playId}, scores/{playId} and
+// the player's gamesPlayed + 1, plus bests/{bestKey} when the score is a new
+// best. scores, bests and gamesPlayed are only accepted together with a new,
+// valid play of a registered player, and a play only together with them, so
 // that they always match what is in plays.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -33,8 +36,9 @@ service cloud.firestore {
       return /databases/$(database)/documents/scores/$(playId);
     }
 
+    // Food points with the combo bonus can be any whole number.
     function validScore(score) {
-      return score is int && score >= 0 && score <= 100000 && score % 100 == 0;
+      return score is int && score >= 0 && score <= 100000;
     }
 
     function validPlayId(playId) {
@@ -55,7 +59,14 @@ service cloud.firestore {
 
     match /players/{playerId} {
       allow get: if true;
-      allow list, write: if false;
+      allow list, create, delete: if false;
+      // One more game, for a new play of this player.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['gamesPlayed', 'lastPlayId'])
+          && request.resource.data.gamesPlayed
+              == resource.data.get('gamesPlayed', 0) + 1
+          && isNewPlay(request.resource.data.lastPlayId)
+          && playAfter(request.resource.data.lastPlayId).playerId == playerId;
     }
 
     match /plays/{playId} {
@@ -65,8 +76,11 @@ service cloud.firestore {
           && exists(playerDoc(request.resource.data.playerId))
           && validScore(request.resource.data.score)
           && request.resource.data.createdAt == request.time
-          // Always recorded together with its anonymous score.
-          && existsAfter(scoreDoc(playId));
+          // Always recorded together with its anonymous score, and counted
+          // in the player's games.
+          && existsAfter(scoreDoc(playId))
+          && getAfter(playerDoc(request.resource.data.playerId)).data
+              .get('lastPlayId', null) == playId;
       allow read, update, delete: if false;
     }
 

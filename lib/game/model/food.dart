@@ -1,12 +1,15 @@
 import '../../math/vec2.dart';
 
+/// A kind of food. All kinds share one hit radius (`GameConfig.foodHitRadius`);
+/// the image of each is `assets/images/food/<id>.png`.
 class FoodType {
-  const FoodType({required this.id, required this.hitRadius});
+  const FoodType({required this.id, required this.points});
 
   final String id;
 
-  /// [px]
-  final double hitRadius;
+  /// Points for eating it, before the combo bonus (see `comboPoints`). A
+  /// multiple of 5 keeps the combo points whole.
+  final int points;
 }
 
 enum FoodPhase { ready, flying }

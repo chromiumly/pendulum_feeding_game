@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../math/vec2.dart';
 
 /// Pure game-rule functions. They are independent of Flame so that they can be
@@ -58,6 +60,45 @@ Vec2 brideMouthPosition({
   required Vec2 mouthOffset,
 }) {
   return lowerNode + mouthOffset.rotated(-lowerTheta);
+}
+
+/// Points for eating a food worth [basePoints] as the [combo]th food in a
+/// row (1 for the first): basePoints x (1 + 0.2 x (combo - 1)), without an
+/// upper limit. Whole when [basePoints] is a multiple of 5.
+int comboPoints({required int basePoints, required int combo}) =>
+    basePoints * (combo + 4) ~/ 5;
+
+/// How strongly the draw favours the bride's favourites after [gamesPlayed]
+/// finished games: 0 at first, rising smoothly towards [limit], half way
+/// after [halfPlays] games.
+double favouriteBias({
+  required int gamesPlayed,
+  required double limit,
+  required double halfPlays,
+}) => limit * gamesPlayed / (gamesPlayed + halfPlays);
+
+/// Probability of each of [count] foods, listed best favourite first:
+/// proportional to exp(bias x f), where f goes from 1 for the favourite down
+/// to 0 for the last. A [bias] of 0 draws them all alike; every food stays
+/// possible at any bias.
+List<double> foodProbabilities({required int count, required double bias}) {
+  final weights = [
+    for (var i = 0; i < count; i++)
+      math.exp(bias * (count > 1 ? (count - 1 - i) / (count - 1) : 0)),
+  ];
+  final total = weights.fold(0.0, (sum, w) => sum + w);
+  return [for (final w in weights) w / total];
+}
+
+/// Draws an index with the given [probabilities], which add up to 1.
+int drawIndex(List<double> probabilities, math.Random random) {
+  var r = random.nextDouble();
+  for (var i = 0; i < probabilities.length - 1; i++) {
+    r -= probabilities[i];
+    if (r < 0) return i;
+  }
+  // The last one, also when rounding leaves a little over.
+  return probabilities.length - 1;
 }
 
 /// Whether a circle moving from [from] to [to] touched a circle at [center]
