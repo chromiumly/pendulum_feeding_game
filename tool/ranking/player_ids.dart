@@ -12,6 +12,15 @@
 //       player's game count. With --emulator it writes to a local
 //       Firestore emulator (localhost:8080) instead.
 //
+//   dart run tool/ranking/player_ids.dart reset [--emulator]
+//       Shows how many documents each ranking collection has. Deletes
+//       nothing.
+//
+//   dart run tool/ranking/player_ids.dart reset --confirm <project ID>
+//       Deletes every play, score, best and player, e.g. after rehearsals,
+//       then registers the IDs in players.csv again (with no games). The
+//       IDs, and so the QR codes, stay the same.
+//
 // tool/ranking/out/ and .firebase/ are git-ignored: IDs are secrets (anyone
 // with an ID can record games as that player) and so is the key. Which ID
 // is whose is kept by the host outside this project.
@@ -44,10 +53,16 @@ Future<void> main(List<String> args) async {
       _generate(count: int.parse(_option(args, '--count') ?? '50'));
     case 'register':
       await _register(emulator: args.contains('--emulator'));
+    case 'reset':
+      await _reset(
+        emulator: args.contains('--emulator'),
+        confirm: _option(args, '--confirm'),
+      );
     default:
       _fail(
         'Usage: dart run tool/ranking/player_ids.dart '
-        'generate [--count N] | register [--emulator]',
+        'generate [--count N] | register [--emulator] | '
+        'reset [--emulator] [--confirm <project ID>]',
       );
   }
 }
@@ -147,6 +162,17 @@ String _qrSvg(String data) {
 // ---- register --------------------------------------------------------------
 
 Future<void> _register({required bool emulator}) async {
+  final ids = _readIds();
+  final firestore = await _Firestore.connect(emulator: emulator);
+  try {
+    await firestore.register(ids);
+  } finally {
+    firestore.close();
+  }
+  stdout.writeln('Registered ${ids.length} IDs in ${firestore.label}.');
+}
+
+List<String> _readIds() {
   if (!_csv.existsSync()) _fail('${_csv.path} not found; run generate first.');
   final ids = [
     for (final line in _csv.readAsLinesSync().skip(1))
@@ -155,13 +181,59 @@ Future<void> _register({required bool emulator}) async {
   if (ids.any((id) => !RegExp('^[a-z0-9]{$_idLength}\$').hasMatch(id))) {
     _fail('${_csv.path} has a malformed ID.');
   }
+  return ids;
+}
 
-  final http.Client client;
-  final String base;
-  if (emulator) {
-    client = _EmulatorClient();
-    base = 'http://localhost:8080/v1';
-  } else {
+// ---- reset -----------------------------------------------------------------
+
+/// Everything the game writes, see firestore.rules.
+const _rankingCollections = ['plays', 'scores', 'bests', 'players'];
+
+Future<void> _reset({required bool emulator, String? confirm}) async {
+  final ids = _readIds();
+  final firestore = await _Firestore.connect(emulator: emulator);
+  try {
+    final names = {
+      for (final collection in _rankingCollections)
+        collection: await firestore.documentNames(collection),
+    };
+    for (final MapEntry(:key, :value) in names.entries) {
+      stdout.writeln('${key.padRight(8)} ${value.length} documents');
+    }
+    if (confirm != firestore.projectId) {
+      stdout.writeln(
+        'Nothing deleted. To delete all of them in ${firestore.label} and '
+        'register the ${ids.length} IDs again, add '
+        '--confirm ${firestore.projectId}.',
+      );
+      return;
+    }
+    final all = names.values.expand((n) => n).toList();
+    await firestore.delete(all);
+    stdout.writeln('Deleted ${all.length} documents in ${firestore.label}.');
+    await firestore.register(ids);
+    stdout.writeln('Registered ${ids.length} IDs in ${firestore.label}.');
+  } finally {
+    firestore.close();
+  }
+}
+
+// ---- Firestore REST API ----------------------------------------------------
+
+/// Admin access to the Firestore REST API: with the service account key in
+/// .firebase/, or to the local emulator.
+class _Firestore {
+  _Firestore._(this._client, this._base, this.projectId, this.label);
+
+  static Future<_Firestore> connect({required bool emulator}) async {
+    if (emulator) {
+      return _Firestore._(
+        _EmulatorClient(),
+        'http://localhost:8080/v1',
+        _emulatorProjectId,
+        '$_emulatorProjectId (emulator)',
+      );
+    }
     final keys = Directory('.firebase')
         .listSync()
         .whereType<File>()
@@ -173,43 +245,89 @@ Future<void> _register({required bool emulator}) async {
     final credentials = ServiceAccountCredentials.fromJson(
       jsonDecode(keys.single.readAsStringSync()),
     );
-    client = await clientViaServiceAccount(credentials, [
+    final client = await clientViaServiceAccount(credentials, [
       'https://www.googleapis.com/auth/datastore',
     ]);
-    base = 'https://firestore.googleapis.com/v1';
+    return _Firestore._(
+      client,
+      'https://firestore.googleapis.com/v1',
+      _projectId,
+      _projectId,
+    );
   }
 
-  final projectId = emulator ? _emulatorProjectId : _projectId;
-  final database = 'projects/$projectId/databases/(default)';
-  try {
-    final response = await client.post(
-      Uri.parse('$base/$database/documents:commit'),
+  final http.Client _client;
+  final String _base;
+  final String projectId;
+
+  /// For messages: the project, and whether it is the emulator.
+  final String label;
+
+  String get _database => 'projects/$projectId/databases/(default)';
+
+  void close() => _client.close();
+
+  /// Creates every player in [ids] that is missing. The empty mask leaves
+  /// the fields of a registered player (gamesPlayed) as they are.
+  Future<void> register(List<String> ids) => _commit([
+    for (final id in ids)
+      {
+        'update': {
+          'name': '$_database/documents/players/$id',
+          'fields': <String, Object>{},
+        },
+        'updateMask': {'fieldPaths': <String>[]},
+      },
+  ]);
+
+  /// The full names of all documents in [collection].
+  Future<List<String>> documentNames(String collection) async {
+    final names = <String>[];
+    String? pageToken;
+    do {
+      final uri = Uri.parse('$_base/$_database/documents/$collection').replace(
+        queryParameters: {
+          'pageSize': '300',
+          // Names only, without the fields.
+          'mask.fieldPaths': '__name__',
+          'pageToken': ?pageToken,
+        },
+      );
+      final response = await _client.get(uri);
+      _check(response);
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      for (final document in (body['documents'] as List?) ?? const []) {
+        names.add((document as Map<String, dynamic>)['name'] as String);
+      }
+      pageToken = body['nextPageToken'] as String?;
+    } while (pageToken != null);
+    return names;
+  }
+
+  Future<void> delete(List<String> names) async {
+    // A commit takes at most 500 writes.
+    for (var i = 0; i < names.length; i += 500) {
+      await _commit([
+        for (final name in names.skip(i).take(500)) {'delete': name},
+      ]);
+    }
+  }
+
+  Future<void> _commit(List<Map<String, Object>> writes) async {
+    if (writes.isEmpty) return;
+    final response = await _client.post(
+      Uri.parse('$_base/$_database/documents:commit'),
       headers: {'content-type': 'application/json'},
-      body: jsonEncode({
-        'writes': [
-          for (final id in ids)
-            {
-              // Creates the player if missing. The empty mask leaves the
-              // fields of a registered player (gamesPlayed) as they are.
-              'update': {
-                'name': '$database/documents/players/$id',
-                'fields': <String, Object>{},
-              },
-              'updateMask': {'fieldPaths': <String>[]},
-            },
-        ],
-      }),
+      body: jsonEncode({'writes': writes}),
     );
+    _check(response);
+  }
+
+  static void _check(http.Response response) {
     if (response.statusCode != 200) {
       _fail('Firestore said ${response.statusCode}: ${response.body}');
     }
-  } finally {
-    client.close();
   }
-  stdout.writeln(
-    'Registered ${ids.length} IDs in $projectId'
-    '${emulator ? ' (emulator)' : ''}.',
-  );
 }
 
 /// The emulator accepts the "owner" token, which bypasses the rules like an
