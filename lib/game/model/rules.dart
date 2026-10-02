@@ -68,6 +68,9 @@ Vec2 brideMouthPosition({
 int comboPoints({required int basePoints, required int combo}) =>
     basePoints * (combo + 4) ~/ 5;
 
+/// The multiplier [comboPoints] applies to the [combo]th food in a row.
+double comboMultiplier(int combo) => (combo + 4) / 5;
+
 /// How strongly the draw favours the bride's favourites after [gamesPlayed]
 /// finished games: 0 at first, rising smoothly towards [limit], half way
 /// after [halfPlays] games.
@@ -88,6 +91,37 @@ List<double> foodProbabilities({required int count, required double bias}) {
   ];
   final total = weights.fold(0.0, (sum, w) => sum + w);
   return [for (final w in weights) w / total];
+}
+
+/// How much more an average drawn food is worth after [gamesPlayed] games
+/// than in a first game (0.12 for 12%), and the most it can ever be, as the
+/// bias approaches [biasLimit]. [points] are the foods' points, listed best
+/// favourite first.
+({double uplift, double maxUplift}) favouriteBonus({
+  required List<int> points,
+  required int gamesPlayed,
+  required double biasLimit,
+  required double halfPlays,
+}) {
+  double averageAt(double bias) {
+    final p = foodProbabilities(count: points.length, bias: bias);
+    var sum = 0.0;
+    for (var i = 0; i < points.length; i++) {
+      sum += p[i] * points[i];
+    }
+    return sum;
+  }
+
+  final first = averageAt(0);
+  final bias = favouriteBias(
+    gamesPlayed: gamesPlayed,
+    limit: biasLimit,
+    halfPlays: halfPlays,
+  );
+  return (
+    uplift: averageAt(bias) / first - 1,
+    maxUplift: averageAt(biasLimit) / first - 1,
+  );
 }
 
 /// Draws an index with the given [probabilities], which add up to 1.

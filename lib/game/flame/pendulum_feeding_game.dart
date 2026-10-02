@@ -110,11 +110,12 @@ class PendulumFeedingGame extends FlameGame {
 
   void _handleEvent(GameEvent event) {
     switch (event) {
-      case FoodEaten(:final mouthPosition, :final points):
+      case FoodEaten(:final mouthPosition, :final points, :final combo):
         world.add(
           EatenEffect(
             position: Vector2(mouthPosition.x, mouthPosition.y),
             points: points,
+            combo: combo,
           ),
         );
         _effectTimeLeft = EatenEffect.duration;

@@ -7,8 +7,6 @@ abstract final class StageStyle {
   static const arrowArmed = Color(0xFF2E7D32);
   static const arrowDisarmed = Color(0xFF9E9E9E);
 
-  static const effect = Color(0xFFE91E63);
-
   static const hitCircle = Color(0xAAFF0000);
 
   /// Draw the hit circles used by the rules, for gameplay verification:

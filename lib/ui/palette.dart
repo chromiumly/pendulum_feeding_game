@@ -23,6 +23,13 @@ abstract final class Palette {
   /// Setup-screen hint and the "New Record" bubble.
   static const accentRed = Color(0xFFE65555);
 
+  /// Points and combo shown when the bride eats.
+  static const scorePink = Color(0xFFEB4F9B);
+
+  /// Play-count bonus gauge fill, from left to right.
+  static const gaugeStart = Color(0xFFDAAD4D);
+  static const gaugeEnd = Color(0xFFFF6912);
+
   /// Area outside the 844x390 stage on screens with another aspect ratio.
   static const letterbox = Color(0xFF202020);
 }

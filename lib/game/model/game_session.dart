@@ -55,6 +55,12 @@ class GameSession {
     PendulumState? placedPendulum,
     int gamesPlayed = 0,
   }) : _random = random ?? math.Random(),
+       playBonus = favouriteBonus(
+         points: [for (final type in config.foodTypes) type.points],
+         gamesPlayed: gamesPlayed,
+         biasLimit: config.favouriteBiasLimit,
+         halfPlays: config.favouriteBiasHalfPlays,
+       ),
        foodTypeProbabilities = foodProbabilities(
          count: config.foodTypes.length,
          bias: favouriteBias(
@@ -77,6 +83,10 @@ class GameSession {
 
   /// Probability of each of [GameConfig.foodTypes] in this game.
   final List<double> foodTypeProbabilities;
+
+  /// The play-count bonus of this game: how much more an average food is
+  /// worth than in a first game, and the most it can ever be.
+  final ({double uplift, double maxUplift}) playBonus;
   final DoublePendulum _pendulum;
 
   PendulumState _pendulumState;

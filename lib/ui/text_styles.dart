@@ -50,6 +50,24 @@ abstract final class GameTextStyles {
     fontSize: 32,
     color: Palette.accentRed,
   );
+
+  /// Play-count bonus heading and percentage.
+  static final gaugeLabel = _roundedBase.copyWith(
+    fontSize: 20,
+    color: Palette.brown,
+  );
+
+  /// Shown at the bride's mouth when she eats. A little larger than Figma's
+  /// 20 and 15 px, to read at a glance.
+  static final eatenPoints = _roundedBase.copyWith(
+    fontSize: 24,
+    color: Palette.scorePink,
+  );
+  static final eatenCombo = _roundedBase.copyWith(
+    fontSize: 18,
+    color: Palette.scorePink,
+  );
+
   static final countdown = _roundedBase.copyWith(
     fontSize: 128,
     color: Palette.countdown,

@@ -17,11 +17,15 @@ abstract final class GameAssets {
     'assets/images/groom/throw_3.png',
   ];
 
-  /// Made by tool/food_images.dart from the art in art/food/.
+  /// Shown around the bride when she eats. Made by tool/images.dart from
+  /// art/effects/.
+  static const heart = 'assets/images/effects/heart.png';
+
+  /// Made by tool/images.dart from the art in art/food/.
   static String food(String id) => 'assets/images/food/$id.png';
 
   /// Food images are this many pixels per stage px; drawn at 1 / this, every
-  /// food has the size that tool/food_images.dart chose for it.
+  /// food has the size that tool/images.dart chose for it.
   static const foodImageDensity = 4;
 
   static const helpIcon = 'assets/icons/help.svg';

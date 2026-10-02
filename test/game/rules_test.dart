@@ -144,6 +144,13 @@ void main() {
       expect(points(50), 1620);
     });
 
+    test('applies comboMultiplier', () {
+      expect(comboMultiplier(1), 1.0);
+      expect(comboMultiplier(2), closeTo(1.2, 1e-12));
+      expect(comboMultiplier(20), closeTo(4.8, 1e-12));
+      expect(comboMultiplier(2).toStringAsFixed(1), '1.2');
+    });
+
     test('is whole for base points that are multiples of 5', () {
       expect(comboPoints(basePoints: 135, combo: 2), 162);
       for (var base = 5; base <= 150; base += 5) {

@@ -10,6 +10,7 @@ import '../ui/assets.dart';
 import '../ui/widgets/stage.dart';
 import '../ui/widgets/tile_button.dart';
 import 'countdown_overlay.dart';
+import 'play_bonus_gauge.dart';
 import 'result_popup.dart';
 import 'setup_overlay.dart';
 import 'title_screen.dart';
@@ -18,8 +19,9 @@ import 'title_screen.dart';
 /// session phase around the Flame game. Everything is laid out in the
 /// 844x390 stage coordinates.
 ///
-/// From back to front: the stage background, the setup hint, the game
-/// (transparent), then the overlays (buttons, countdown, result).
+/// From back to front: the stage background, the setup hint and play-count
+/// bonus gauge, the game (transparent), then the overlays (buttons,
+/// countdown, result).
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key, this.ranking});
 
@@ -101,7 +103,15 @@ class _GameScreenState extends State<GameScreen> {
               child: ValueListenableBuilder(
                 valueListenable: game.phase,
                 builder: (context, phase, _) => phase == GamePhase.setup
-                    ? const SetupHint()
+                    ? Stack(
+                        children: [
+                          const SetupHint(),
+                          PlayBonusGauge(
+                            uplift: game.session.playBonus.uplift,
+                            maxUplift: game.session.playBonus.maxUplift,
+                          ),
+                        ],
+                      )
                     : const SizedBox.shrink(),
               ),
             ),

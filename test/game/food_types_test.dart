@@ -120,4 +120,35 @@ void main() {
     expect(session.foodTypeProbabilities, _probabilities(10));
     expect(GameSession().foodTypeProbabilities, _probabilities(0));
   });
+
+  group('favouriteBonus', () {
+    ({double uplift, double maxUplift}) bonus(int gamesPlayed) {
+      const config = GameConfig();
+      return favouriteBonus(
+        points: [for (final type in defaultFoodTypes) type.points],
+        gamesPlayed: gamesPlayed,
+        biasLimit: config.favouriteBiasLimit,
+        halfPlays: config.favouriteBiasHalfPlays,
+      );
+    }
+
+    test('is the rise in average points over a first game', () {
+      expect(bonus(0).uplift, closeTo(0, 1e-12));
+      // 115.109 / 102.5 and 125.208 / 102.5, from the draw tests above.
+      expect(bonus(5).uplift, closeTo(0.12301, 1e-4));
+      expect(bonus(5).maxUplift, closeTo(0.22154, 1e-4));
+    });
+
+    test('the gauge fills towards, but never reaches, the most', () {
+      double gauge(int n) => bonus(n).uplift / bonus(n).maxUplift;
+      expect(gauge(1), closeTo(0.19, 0.005));
+      expect(gauge(5), closeTo(0.56, 0.005));
+      expect(gauge(10), closeTo(0.72, 0.005));
+      expect(gauge(1000), lessThan(1));
+    });
+
+    test('a session has the bonus for its play count', () {
+      expect(GameSession(gamesPlayed: 5).playBonus, bonus(5));
+    });
+  });
 }

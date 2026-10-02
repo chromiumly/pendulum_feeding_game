@@ -46,7 +46,7 @@ class GameConfig {
     this.foodSpawnPosition = const Vec2(727, 216),
     this.foodGravity = const Vec2(0, 700),
     this.foodTypes = defaultFoodTypes,
-    this.foodHitRadius = 28,
+    this.foodHitRadius = 32,
     this.favouriteBiasLimit = 3,
     this.favouriteBiasHalfPlays = 5,
     this.launchScale = 4.0,
@@ -95,7 +95,7 @@ class GameConfig {
   final List<FoodType> foodTypes;
 
   /// Hit radius of every food [px]. A little larger than the food images,
-  /// which look like circles of about 47 px across (tool/food_images.dart),
+  /// which look like circles of about 53 px across (tool/images.dart),
   /// to be forgiving.
   final double foodHitRadius;
 

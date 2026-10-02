@@ -1,9 +1,10 @@
-// Food images for the game: makes assets/images/food/ from the original
-// art in art/food/, so that all foods look about the same size.
+// Images for the game, made from the original art in art/: trimmed and
+// scaled down to what the game needs.
 //
-//   dart run tool/food_images.dart
+//   dart run tool/images.dart
 //
-// Each image is trimmed to its visible pixels and scaled so that
+// Foods (art/food/ -> assets/images/food/) are sized to look about the same
+// size: each image is trimmed to its visible pixels and scaled so that
 // sqrt(equivalent diameter x long side) is [_visualSize] display px. The
 // equivalent diameter is that of a circle with the image's visible area.
 // Matching the area alone would make tall or wide foods (parfait, sushi)
@@ -14,13 +15,16 @@
 // high-density phone screens. The game draws every food image at
 // 1 / [_density] (GameAssets.foodImageDensity), so the sizes chosen here are
 // the sizes on the stage.
+//
+// Effects (art/effects/ -> assets/images/effects/) are scaled to [_density]
+// times the largest size the game draws them at.
 import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:image/image.dart' as img;
 
-/// Display px. About a 47 px circle's worth of visible area per food.
-const _visualSize = 52.0;
+/// Display px. About a 53 px circle's worth of visible area per food.
+const _visualSize = 58.0;
 
 /// Must equal GameAssets.foodImageDensity.
 const _density = 4;
@@ -28,34 +32,27 @@ const _density = 4;
 /// Pixels at least this opaque count as visible area.
 const _visibleAlpha = 0.5;
 
-final _sourceDir = Directory('art/food');
-final _outputDir = Directory('assets/images/food');
+/// Largest display width of each effect image [px]; must match where the
+/// game draws it.
+const _effectWidths = {
+  'heart.png': 36.0, // EatenEffect.bigHeartSize
+};
 
 void main() {
   if (!File('pubspec.yaml').existsSync()) {
     stderr.writeln('Run from the project root.');
     exit(1);
   }
-  _outputDir.createSync(recursive: true);
-  final sources =
-      _sourceDir
-          .listSync()
-          .whereType<File>()
-          .where((file) => file.path.endsWith('.png'))
-          .toList()
-        ..sort((a, b) => a.path.compareTo(b.path));
+  _foods();
+  _effects();
+}
 
+void _foods() {
+  final output = Directory('assets/images/food')..createSync(recursive: true);
   stdout.writeln('food                 display    eq.diam  bytes');
-  for (final source in sources) {
+  for (final source in _pngs(Directory('art/food'))) {
     final name = source.uri.pathSegments.last;
-    final original = img.decodePng(source.readAsBytesSync());
-    if (original == null) {
-      stderr.writeln('$name: not a PNG');
-      exit(1);
-    }
-    final image = _trim(
-      original.convert(format: img.Format.float32, numChannels: 4),
-    );
+    final image = _load(source);
     final diameter = 2 * math.sqrt(_visibleArea(image) / math.pi);
     final longSide = math.max(image.width, image.height);
     final displayScale = _visualSize / math.sqrt(diameter * longSide);
@@ -65,7 +62,7 @@ void main() {
       resized.convert(format: img.Format.uint8),
       level: 9,
     );
-    File('${_outputDir.path}/$name').writeAsBytesSync(bytes);
+    File('${output.path}/$name').writeAsBytesSync(bytes);
 
     final display =
         '${(resized.width / _density).toStringAsFixed(0)}x'
@@ -76,6 +73,51 @@ void main() {
       '${bytes.length}',
     );
   }
+}
+
+void _effects() {
+  final output = Directory('assets/images/effects')
+    ..createSync(recursive: true);
+  stdout.writeln('\neffect               display    bytes');
+  for (final source in _pngs(Directory('art/effects'))) {
+    final name = source.uri.pathSegments.last;
+    final width = _effectWidths[name];
+    if (width == null) {
+      stderr.writeln('$name: add its display width to _effectWidths.');
+      exit(1);
+    }
+    final image = _load(source);
+    final resized = _resize(image, width * _density / image.width);
+    final bytes = img.encodePng(
+      resized.convert(format: img.Format.uint8),
+      level: 9,
+    );
+    File('${output.path}/$name').writeAsBytesSync(bytes);
+    final display =
+        '${(resized.width / _density).toStringAsFixed(0)}x'
+        '${(resized.height / _density).toStringAsFixed(0)}';
+    stdout.writeln(
+      '${name.padRight(21)}${display.padRight(11)}${bytes.length}',
+    );
+  }
+}
+
+List<File> _pngs(Directory dir) =>
+    dir
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.png'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+
+/// [source] decoded and trimmed to its visible pixels, in floating point.
+img.Image _load(File source) {
+  final original = img.decodePng(source.readAsBytesSync());
+  if (original == null) {
+    stderr.writeln('${source.path}: not a PNG');
+    exit(1);
+  }
+  return _trim(original.convert(format: img.Format.float32, numChannels: 4));
 }
 
 /// [image] cropped to its non-transparent pixels.

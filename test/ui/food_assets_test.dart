@@ -23,7 +23,7 @@ void main() {
   });
 
   test('every food image is made from its art', () {
-    // Run `dart run tool/food_images.dart` after changing art/food/.
+    // Run `dart run tool/images.dart` after changing art/food/.
     expect(_pngNames('art/food'), _pngNames('assets/images/food'));
   });
 }

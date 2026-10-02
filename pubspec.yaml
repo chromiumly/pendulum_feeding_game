@@ -71,6 +71,7 @@ flutter:
   assets:
     - assets/images/background/
     - assets/images/bride/
+    - assets/images/effects/
     - assets/images/food/
     - assets/images/groom/
     - assets/images/pendulum/
