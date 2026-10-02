@@ -4,13 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ranking_models.dart';
 
-/// What the ranking keeps on the device: the player ID, finished games not
-/// yet recorded (so that none is lost when the network is down), and how
+/// What the ranking keeps on the device: finished games not yet recorded (so that none is lost when the network is down), and how
 /// many games of a player were recorded when last heard (to know it
 /// offline).
 abstract interface class RankingStorage {
-  Future<String?> loadPlayerId();
-  Future<void> savePlayerId(String playerId);
   Future<List<PlayRecord>> loadPending();
   Future<void> savePending(List<PlayRecord> records);
   Future<int?> loadRecordedGames(String playerId);
@@ -24,17 +21,9 @@ class SharedPreferencesRankingStorage implements RankingStorage {
 
   final SharedPreferencesAsync _preferences;
 
-  static const _playerIdKey = 'ranking.playerId';
   static const _pendingKey = 'ranking.pending';
   static String _recordedGamesKey(String playerId) =>
       'ranking.recordedGames.$playerId';
-
-  @override
-  Future<String?> loadPlayerId() => _preferences.getString(_playerIdKey);
-
-  @override
-  Future<void> savePlayerId(String playerId) =>
-      _preferences.setString(_playerIdKey, playerId);
 
   @override
   Future<List<PlayRecord>> loadPending() async {
@@ -67,15 +56,8 @@ class SharedPreferencesRankingStorage implements RankingStorage {
 
 /// [RankingStorage] in memory, for tests.
 class MemoryRankingStorage implements RankingStorage {
-  String? playerId;
   List<PlayRecord> pending = [];
   final recordedGames = <String, int>{};
-
-  @override
-  Future<String?> loadPlayerId() async => playerId;
-
-  @override
-  Future<void> savePlayerId(String playerId) async => this.playerId = playerId;
 
   @override
   Future<List<PlayRecord>> loadPending() async => List.of(pending);

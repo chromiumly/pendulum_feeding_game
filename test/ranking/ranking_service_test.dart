@@ -61,11 +61,10 @@ void main() {
     storage = MemoryRankingStorage();
   });
 
-  test('a registered ID from the URL is remembered and recorded', () async {
+  test('a registered ID from the URL is recorded', () async {
     final ranking = service();
     await ranking.start();
     expect(ranking.hasPlayer, isTrue);
-    expect(storage.playerId, _id);
 
     final status = await ranking.recordGame(1200);
     expect(status, isA<RankingRecorded>());
@@ -74,14 +73,13 @@ void main() {
     expect(storage.pending, isEmpty);
   });
 
-  test(
-    'a later launch without the ID in the URL uses the remembered one',
-    () async {
-      storage.playerId = _id;
-      final ranking = service('https://example.com/');
-      expect(await ranking.recordGame(800), isA<RankingRecorded>());
-    },
-  );
+  test('a launch without the ID plays as a guest, after one with it', () async {
+    await service().recordGame(800);
+    final ranking = service('https://example.com/');
+    expect(await ranking.recordGame(700), isA<RankingGuest>());
+    expect(ranking.gamesPlayed, 0);
+    expect(repository.recorded, hasLength(1));
+  });
 
   test('no ID, or a malformed one, plays as a guest', () async {
     for (final url in [

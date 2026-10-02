@@ -49,23 +49,18 @@ class RankingService {
   /// heard. A game counts as soon as [recordGame] is called for it.
   int get gamesPlayed => hasPlayer ? _recordedGames + _pendingGames : 0;
 
-  /// Picks up the player ID from the launch URL (remembering it for later
-  /// launches) or from an earlier launch, checks that it is registered, and
-  /// sends games left over from before. Safe to call more than once.
+  /// Picks up the player ID from the launch URL, checks that it is
+  /// registered, and sends games left over from before. Safe to call more
+  /// than once.
+  ///
+  /// The ID is not remembered on the device: a URL without it plays as a
+  /// guest, so that the URL always tells who is playing. Reloads and
+  /// bookmarks keep it.
   Future<void> start() => _started;
 
   Future<void> _start() async {
-    final fromUrl = playerIdFromUri(_launchUri);
-    String? id = fromUrl;
-    try {
-      // The device may refuse storage (e.g. private browsing); the ID from
-      // the URL still works for this visit.
-      if (fromUrl != null) await _storage.savePlayerId(fromUrl);
-      id ??= await _storage.loadPlayerId();
-    } on Object {
-      // Keep the ID from the URL, if any.
-    }
-    if (id == null || !isValidPlayerId(id)) return;
+    final id = playerIdFromUri(_launchUri);
+    if (id == null) return;
     _playerId = id;
 
     try {
