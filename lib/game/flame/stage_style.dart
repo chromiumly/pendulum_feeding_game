@@ -3,9 +3,8 @@ import 'package:flutter/painting.dart';
 /// Colours drawn by the Flame components that are not (yet) part of the
 /// Figma design. Design colours live in `Palette`.
 abstract final class StageStyle {
-  static const guide = Color(0xFF000000);
-  static const arrowArmed = Color(0xFF2E7D32);
-  static const arrowDisarmed = Color(0xFF9E9E9E);
+  /// The aim guide while the drag is too short to throw.
+  static const guideDisarmed = Color(0xFF9E9E9E);
 
   static const hitCircle = Color(0xAAFF0000);
 

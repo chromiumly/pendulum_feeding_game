@@ -40,8 +40,8 @@ class GameConfig {
     this.physicsSubsteps = 2,
     this.pendulumInitialState = setupStartPendulumState,
     this.pendulumOrigin = const Vec2(237.5, 116.5),
-    this.brideMouthOffset = const Vec2(12, -50),
-    this.brideMouthRadius = 16,
+    this.brideMouthOffset = const Vec2(4.5, -57),
+    this.brideMouthRadius = 20,
     this.groomPosition = const Vec2(698, 344),
     this.foodSpawnPosition = const Vec2(727, 216),
     this.foodGravity = const Vec2(0, 700),
@@ -77,9 +77,13 @@ class GameConfig {
   final PendulumState pendulumInitialState;
   final Vec2 pendulumOrigin;
 
-  /// Offset from the lower pendulum node to the bride's mouth, before the
-  /// bride is rotated by -lowerTheta. The lower node is where the rope meets
-  /// the swing seat; this must match the mouth in the bride sprite.
+  /// Offset from the lower pendulum node to the centre of the bride's hit
+  /// circle ("mouth" in the rules), before the bride is rotated by
+  /// -lowerTheta. The lower node is where the rope meets the swing seat.
+  ///
+  /// It is on her face, a little behind and above her mouth at the front of
+  /// her profile (12, -50), so that the circle covers her face rather than
+  /// the air in front of it.
   final Vec2 brideMouthOffset;
 
   /// Hit radius around the bride's mouth [px].

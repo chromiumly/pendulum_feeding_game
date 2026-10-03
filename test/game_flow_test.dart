@@ -190,9 +190,9 @@ void main() {
     expect(_drawsFood(game), isTrue);
     expect(_brideDrawCalls(game), 1);
     expect(setupBrideDraws, greaterThan(1));
-    // Two rods and two pivots once the glow is gone.
-    expect(_drawCalls<PendulumComponent>(game), 4);
-    expect(setupPendulumDraws, greaterThan(4));
+    // Two ropes of four layers each and two pivots once the glow is gone.
+    expect(_drawCalls<PendulumComponent>(game), 10);
+    expect(setupPendulumDraws, greaterThan(10));
     await frames(240); // Rest of the countdown and "START".
     expect(game.session.phase, GamePhase.playing);
 
