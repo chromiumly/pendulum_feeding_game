@@ -30,6 +30,10 @@ abstract final class Palette {
   static const gaugeStart = Color(0xFFDAAD4D);
   static const gaugeEnd = Color(0xFFFF6912);
 
+  /// How-to-play tip cards and their text.
+  static const card = Color(0xFFF6E6C2);
+  static const cardText = Color(0xFF6C3B16);
+
   /// Area outside the 844x390 stage on screens with another aspect ratio.
   static const letterbox = Color(0xFF202020);
 }

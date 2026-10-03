@@ -33,4 +33,7 @@ abstract final class GameAssets {
   static const startIcon = 'assets/icons/start.svg';
   static const retryIcon = 'assets/icons/retry.svg';
   static const homeIcon = 'assets/icons/home.svg';
+
+  /// The how-to-play page buttons, pointing up as exported from Figma.
+  static const pageArrow = 'assets/icons/page_arrow.svg';
 }

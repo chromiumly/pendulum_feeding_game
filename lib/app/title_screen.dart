@@ -128,8 +128,8 @@ class _TitleScreenState extends State<TitleScreen>
       ),
     ),
     Positioned(
-      left: 72,
-      top: 35,
+      left: 140,
+      top: 25,
       child: GestureDetector(
         // Swallow taps on the popup so they do not close it.
         onTap: () {},

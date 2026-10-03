@@ -68,6 +68,34 @@ abstract final class GameTextStyles {
     color: Palette.scorePink,
   );
 
+  /// How-to-play popup: the lead text under the heading.
+  static final howToLead = _roundedBase.copyWith(
+    fontSize: 16,
+    color: Palette.brown,
+  );
+
+  /// How-to-play tip cards.
+  static final cardHeading = _roundedBase.copyWith(
+    fontSize: 16,
+    color: Palette.darkBrown,
+  );
+  static final cardBody = _roundedBase.copyWith(
+    fontSize: 13,
+    color: Palette.cardText,
+  );
+  static final cardPoints = _roundedBase.copyWith(
+    fontSize: 14,
+    color: Palette.scorePink,
+  );
+  static final cardCombo = _roundedBase.copyWith(
+    fontSize: 12,
+    color: Palette.scorePink,
+  );
+  static final cardGaugeLabel = _roundedBase.copyWith(
+    fontSize: 12,
+    color: Palette.brown,
+  );
+
   static final countdown = _roundedBase.copyWith(
     fontSize: 128,
     color: Palette.countdown,

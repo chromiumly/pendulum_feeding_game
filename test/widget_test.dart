@@ -54,18 +54,45 @@ void main() {
     await tester.pumpWidget(const PendulumFeedingApp());
     await tester.tap(find.bySemanticsLabel('遊び方'));
     await tester.pump();
-    expect(find.text(howToPlayText), findsOneWidget);
+    const page1 = HowToPlayPopup.page1Heading;
+    expect(find.text(page1), findsOneWidget);
     expect(find.text('TAP TO START'), findsNothing);
 
     // Tapping inside the popup keeps it open.
-    await tester.tap(find.text(howToPlayText));
+    await tester.tap(find.text(page1));
     await tester.pump();
-    expect(find.text(howToPlayText), findsOneWidget);
+    expect(find.text(page1), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('閉じる'));
     await tester.pump();
-    expect(find.text(howToPlayText), findsNothing);
+    expect(find.text(page1), findsNothing);
     expect(find.text('TAP TO START'), findsOneWidget);
+  });
+
+  testWidgets('the how-to popup pages to the tips and back', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    await tester.tap(find.bySemanticsLabel('遊び方'));
+    await tester.pump();
+
+    await tester.tap(find.bySemanticsLabel('次のページ'));
+    await tester.pump();
+    expect(find.text(HowToPlayPopup.page2Heading), findsOneWidget);
+    expect(find.text(HowToPlayPopup.page1Heading), findsNothing);
+    // The game's own numbers.
+    expect(find.text('+150'), findsOneWidget);
+    expect(find.text('+105'), findsOneWidget);
+    expect(find.text('+55'), findsOneWidget);
+    expect(find.text('COMBO ×1.6'), findsOneWidget);
+    expect(find.text('+168'), findsOneWidget);
+    expect(find.text('13.3%'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('前のページ'));
+    await tester.pump();
+    expect(find.text(HowToPlayPopup.page1Heading), findsOneWidget);
   });
 
   testWidgets('portrait shows the rotate prompt', (tester) async {
