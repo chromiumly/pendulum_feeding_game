@@ -11,6 +11,7 @@ import '../ui/widgets/round_icon_button.dart';
 import '../ui/widgets/stage.dart';
 import 'game_screen.dart';
 import 'how_to_play_popup.dart';
+import 'sound_button.dart';
 
 /// The title screen: tap to start, or "?" for how to play.
 class TitleScreen extends StatefulWidget {
@@ -65,6 +66,7 @@ class _TitleScreenState extends State<TitleScreen>
             const Positioned.fill(child: StageBackground()),
             const Positioned.fill(child: BlurOverlay(tint: BlurOverlay.light)),
             if (_showHowToPlay) ..._howToPlay() else ..._title(),
+            const SoundButton(),
           ],
         ),
       ),

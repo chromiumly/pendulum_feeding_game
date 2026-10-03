@@ -42,6 +42,13 @@ abstract final class GameAssets {
   static const retryIcon = 'assets/icons/retry.svg';
   static const homeIcon = 'assets/icons/home.svg';
 
+  /// The sound button: a speaker with waves (sound on), and a dim speaker
+  /// with a red cross (sound off). Drawn in the how-to-play close button's
+  /// fill colour, `Palette.brown`, in a 34x26 box cut close to the drawing so
+  /// that it can be shown large.
+  static const soundOnIcon = 'assets/icons/sound_on.svg';
+  static const soundOffIcon = 'assets/icons/sound_off.svg';
+
   /// The how-to-play page buttons, pointing up as exported from Figma.
   static const pageArrow = 'assets/icons/page_arrow.svg';
 }

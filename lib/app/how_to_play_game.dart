@@ -12,6 +12,7 @@ import '../game/model/game_session.dart';
 import '../physics/double_pendulum.dart';
 import '../ui/assets.dart';
 import '../ui/widgets/stage.dart';
+import 'sound_scope.dart';
 
 /// Where the how-to-play demo starts, and stays near: both rods at the same
 /// small angle, so the pendulum hangs as a near-straight line, swinging only
@@ -70,6 +71,7 @@ class _HowToPlayGameState extends State<HowToPlayGame> {
   late final _game = PendulumFeedingGame(
     session: GameSession(config: howToPlayGameConfig),
     showHitCircles: true,
+    sound: SoundScope.maybeOf(context),
   )..startCountdown();
 
   bool _showHint = true;

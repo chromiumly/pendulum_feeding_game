@@ -145,7 +145,8 @@ void main() {
     expect(hint, findsOneWidget);
   });
 
-  testWidgets('the how-to popup pages to the tips and back', (tester) async {
+  testWidgets('the how-to popup pages through the tips to the credits and '
+      'back', (tester) async {
     tester.view.physicalSize = const Size(844, 390);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -158,6 +159,7 @@ void main() {
     await tester.pump();
     expect(find.text(HowToPlayPopup.page2Heading), findsOneWidget);
     expect(find.text(HowToPlayPopup.page1Heading), findsNothing);
+    expect(find.text(HowToPlayPopup.recordNote), findsNothing);
     // The game's own numbers.
     expect(find.text('+150'), findsOneWidget);
     expect(find.text('+105'), findsOneWidget);
@@ -166,9 +168,91 @@ void main() {
     expect(find.text('+168'), findsOneWidget);
     expect(find.text('13.3%'), findsOneWidget);
 
+    // On to the credits, then back the same way.
+    await tester.tap(find.bySemanticsLabel('次のページ'));
+    await tester.pump();
+    expect(find.text(HowToPlayPopup.page3Heading), findsOneWidget);
+    expect(find.text(HowToPlayPopup.page2Heading), findsNothing);
+    expect(find.text('Jumpei Kurokawa'), findsOneWidget);
+    expect(find.text(HowToPlayPopup.recordNote), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('前のページ'));
+    await tester.pump();
+    expect(find.text(HowToPlayPopup.page2Heading), findsOneWidget);
+    // The note belongs to the credits alone.
+    expect(find.text(HowToPlayPopup.recordNote), findsNothing);
     await tester.tap(find.bySemanticsLabel('前のページ'));
     await tester.pump();
     expect(find.text(HowToPlayPopup.page1Heading), findsOneWidget);
+  });
+
+  testWidgets('the note on the play results is on one line, clear of ◀, at '
+      'the height of the tips page closing text', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    await tester.tap(find.bySemanticsLabel('遊び方'));
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('次のページ'));
+    await tester.pump();
+    final closing = tester.getRect(
+      find.text('ハイスコアを目指して頑張ろう！\n何か良いことがあるかも...？'),
+    );
+    await tester.tap(find.bySemanticsLabel('次のページ'));
+    await tester.pump();
+
+    final note = tester.getRect(find.text(HowToPlayPopup.recordNote));
+    // One line of the 16 px body text (a line is 1.2 times the size).
+    expect(note.height, closeTo(16 * 1.2, 1));
+    // Starts where the other texts do, and stops short of ◀.
+    expect(note.left, closeTo(closing.left, 1e-9));
+    expect(
+      note.right,
+      lessThan(tester.getRect(find.bySemanticsLabel('前のページ')).left),
+    );
+    // Its middle is at the height of the middle of the two-line closing text
+    // of the tips page, and of the buttons.
+    expect(note.center.dy, closeTo(closing.center.dy, 1));
+  });
+
+  testWidgets('the page buttons: ▶ stays put, ◀ sits beside it, and on the '
+      'last page stands a little left of where ▶ is', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    await tester.tap(find.bySemanticsLabel('遊び方'));
+    await tester.pump();
+
+    final next = find.bySemanticsLabel('次のページ');
+    final back = find.bySemanticsLabel('前のページ');
+    // Page 1: ▶ only.
+    expect(back, findsNothing);
+    final nextBox = tester.getRect(next);
+
+    // Page 2: ▶ where it was, ◀ to its left with a gap of 24 between the
+    // triangles. The 70 px box holds a triangle 52.5 px long, flush with the
+    // right of ▶'s box and the left of ◀'s.
+    await tester.tap(next);
+    await tester.pump();
+    expect(tester.getRect(next), nextBox);
+    final backBox = tester.getRect(back);
+    expect(backBox.top, nextBox.top);
+    final nextTriangleLeft = nextBox.right - 52.5;
+    expect(backBox.left + 52.5, closeTo(nextTriangleLeft - 24, 1e-9));
+
+    // Page 3: ◀ only, at the same height, with its triangle a little to the
+    // left of where ▶'s was (how far is a matter of taste, so only "a
+    // little" is tested: not so far as to reach page 2's ◀).
+    await tester.tap(next);
+    await tester.pump();
+    expect(next, findsNothing);
+    final lastBack = tester.getRect(back);
+    expect(lastBack.top, nextBox.top);
+    expect(nextTriangleLeft - lastBack.left, inInclusiveRange(1, 40));
   });
 
   testWidgets('portrait shows the rotate prompt', (tester) async {

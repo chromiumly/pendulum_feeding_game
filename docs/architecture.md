@@ -14,9 +14,10 @@
 | `lib/app/` | Flutter の画面（タイトル、ゲーム、遊び方、リザルト、カウントダウンなど） |
 | `lib/ui/` | 色、文字スタイル、アセットのパス、表示用の書式、共通ウィジェット |
 | `lib/ranking/` | プレイヤー ID、記録とランキング、Firebase との接続 |
+| `lib/audio/` | 音の ON/OFF（`SoundController`）、BGM の位置の計算、flame_audio で鳴らす実装（`FlameSoundBackend`） |
 | `assets/` | ゲームに同梱する画像・アイコン・フォント（[assets.md](assets.md)） |
-| `art/` | 画像の元データ。`tool/images.dart` で `assets/images/` を作る |
-| `tool/` | 開発用スクリプト（画像の作成、プレイヤー ID の管理、Firestore ルールのテスト、TS 版との比較データ作成） |
+| `art/` | 画像と音声の元データ。`tool/images.dart` と `tool/audio.dart` で `assets/` の画像と音声を作る |
+| `tool/` | 開発用スクリプト（画像と音声の作成、プレイヤー ID の管理、Firestore ルールのテスト、TS 版との比較データ作成） |
 | `test/` | 単体テストとウィジェットテスト |
 
 ## ゲームの中心: `GameSession`
@@ -58,6 +59,15 @@
 | `RankingStorage`（`SharedPreferencesRankingStorage`） | 端末に残す未送信の記録と、最後に確認した遊んだ回数 |
 
 ゲーム側（`GameScreen`）は `RankingService` だけを使う。サービスがなければ全員ゲストとして遊べる。詳細は [firebase.md](firebase.md)。
+
+## 音
+
+- `SoundController`（`lib/audio/sound_controller.dart`）が、音が ON かどうかを持つ。起動時は OFF。ON にすると BGM を聞こえるようにし（ブラウザは操作前に音を鳴らせないので、最初の ON が BGM の開始）、OFF にすると聞こえなくする。切り替えは順番に実行するので、素早く切り替えても状態がずれない。
+- 実際に音を出す部分は `SoundBackend`（インターフェース）に分けてあり、本番は `FlameSoundBackend`（flame_audio）、テストは `test/audio/fake_sound_backend.dart` の偽物を使う。音の失敗（再生できないなど）はゲームに影響させず、静かなままにする。
+- **BGM の OFF は、音量ではなく一時停止**（iPhone の Web は音量を変えられないため）。ON に戻すときは、止めたときの位置に、止めていた時間を足した場所（曲の長さで折り返す。`positionAfterMute`）へ移動してから再開するので、裏で流れ続けていたのと同じように聞こえる。
+- コントローラーはアプリ全体で 1 つ（`main()` で作り、`PendulumFeedingApp` が `SoundScope` で全画面に渡す）。画面が変わっても BGM が途切れないのはこのため。渡さなければ無音で、ボタンも出ない（テストの既定）。
+- 効果音は `GameEvent` から鳴らす（`PendulumFeedingGame._handleEvent`）。ゲームのルール側（`GameSession`）は音を知らない。
+- ボタン（`SoundButton`）は、タイトル画面とゲーム画面の `Stack` の最後に置く。リザルトなどのぼかしの上でも、くっきり押せる。
 
 ## テスト
 

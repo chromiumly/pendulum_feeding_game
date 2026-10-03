@@ -14,6 +14,7 @@
 - **プレイヤー ID**: QR コードで配る URL に ID が入っていて、その ID でスコアを記録する（ID なしはゲスト）
 - **スコアランキング**: 全試行中の順位と、挑戦者中の自己ベストの順位をリザルトで表示。遊んだ回数が多いほど好物が出やすくなるプレイ回数ボーナスもある
 - **Firebase によるスコア管理**: Cloud Firestore に記録し、書き込みの正しさはセキュリティルールで保証。通信できないときは端末に残して後で送る
+- **BGM と効果音**: 画面左下のボタンで ON/OFF（起動時は OFF）
 - **GitHub Pages で Web 公開**: `main` へのプッシュで自動ビルド・公開
 
 ## Documentation
@@ -26,7 +27,7 @@
 | [アーキテクチャ](docs/architecture.md) | コードの構成と責務、ゲームの状態と描画の分け方、テスト |
 | [Firebase](docs/firebase.md) | プレイヤー ID、Firestore のデータ構成とルール、管理ツール |
 | [デプロイ](docs/deployment.md) | GitHub Pages への公開、ルールとの順番、本番前の準備 |
-| [アセット](docs/assets.md) | 画像・アイコン・フォントの置き場所と作り方 |
+| [アセット](docs/assets.md) | 画像・アイコン・フォント・音声の置き場所と作り方、出典 |
 
 ## Development
 
@@ -37,6 +38,7 @@
 - 必要に応じて:
   - Firestore のルールのテスト: Node.js と Java（[firebase.md](docs/firebase.md#セキュリティルールのテストと反映)）
   - プレイヤー ID の登録など: Firebase のサービスアカウントの鍵（[firebase.md](docs/firebase.md#管理ツール)）
+  - 音声の作成（`dart run tool/audio.dart`）: ffmpeg（[assets.md](docs/assets.md#音声)）
 
 ### 起動
 
@@ -68,9 +70,24 @@ GitHub Pages への公開は CI が行う（[deployment.md](docs/deployment.md)�
 | 分野 | 使用しているもの |
 |---|---|
 | アプリ | Flutter（Web）、Dart |
-| ゲームエンジン | Flame（ゲームループ、描画、入力） |
+| ゲームエンジン | Flame（ゲームループ、描画、入力）、flame_audio（BGM と効果音） |
 | UI | flutter_svg（Figma から書き出したアイコン） |
 | バックエンド | Firebase（Cloud Firestore、セキュリティルール）、crypto（自己ベストのキーの SHA-256） |
 | 端末への保存 | shared_preferences |
 | 公開 | GitHub Pages、GitHub Actions |
-| 開発用 | fake_cloud_firestore（テスト）、Firebase エミュレータ（ルールのテスト）、image（画像の縮小）、qr・googleapis_auth（プレイヤー ID の管理ツール） |
+| 開発用 | ffmpeg（音声の軽量化）、fake_cloud_firestore（テスト）、Firebase エミュレータ（ルールのテスト）、image（画像の縮小）、qr・googleapis_auth（プレイヤー ID の管理ツール） |
+
+## Credits
+
+- **画像**: すべて作者が Google Flow で生成したものです。
+- **BGM**: 作者が Google Flow Music で生成したものです。
+- **効果音**: [OtoLogic](https://otologic.jp/)（https://otologic.jp/）の素材を使用しています。
+- **フォント**: M PLUS Rounded 1c、Inter（SIL Open Font License）
+
+ゲーム内では、遊び方の 3 ページ目「クレジット」にも載せています。出典の詳細は [アセット](docs/assets.md#出典とクレジット) を参照してください。
+
+## License
+
+All rights reserved。再配布・改変・商用利用は、作者の許可なく行えません。効果音やフォントなどの第三者の素材は、それぞれの規約に従います。詳しくは [LICENSE](LICENSE) を参照してください。
+
+プレイ結果は、ランキングのために記録されます（記録される内容は [Firebase](docs/firebase.md#データ構成) を参照）。ゲーム内でも、遊び方の 3 ページ目「クレジット」の下に書いています。

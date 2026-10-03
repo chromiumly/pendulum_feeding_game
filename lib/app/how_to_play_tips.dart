@@ -111,7 +111,7 @@ class _FavouritesCard extends StatelessWidget {
     final sweetPotato = _food('sweet_potato');
     return _TipCard(
       heading: '好物は慎重に！',
-      body: '新婦が好きな食べ物\nほど高得点',
+      body: '新婦が好きな食べ物\nほど高得点！',
       bodyLeft: 19,
       illustration: [
         _image(

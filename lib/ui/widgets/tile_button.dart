@@ -110,6 +110,8 @@ class IconTileButton extends StatefulWidget {
     required this.iconSize,
     required this.semanticLabel,
     required this.onPressed,
+    this.caption,
+    this.captionStyle,
   });
 
   static const size = 60.0;
@@ -117,6 +119,12 @@ class IconTileButton extends StatefulWidget {
   /// SVG asset path, drawn at [iconSize] in the centre.
   final String icon;
   final Size iconSize;
+
+  /// Small text under the icon, e.g. the state of a switch; null for none.
+  final String? caption;
+
+  /// How [caption] looks.
+  final TextStyle? captionStyle;
 
   /// What screen readers announce.
   final String semanticLabel;
@@ -166,14 +174,29 @@ class _IconTileButtonState extends State<IconTileButton> {
               ],
             ),
             alignment: Alignment.center,
-            child: SvgPicture.asset(
-              widget.icon,
-              width: widget.iconSize.width,
-              height: widget.iconSize.height,
-            ),
+            child: _content(),
           ),
         ),
       ),
+    );
+  }
+
+  /// Returns the icon, with the caption under it if there is one.
+  Widget _content() {
+    final icon = SvgPicture.asset(
+      widget.icon,
+      width: widget.iconSize.width,
+      height: widget.iconSize.height,
+    );
+    final caption = widget.caption;
+    if (caption == null) return icon;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        icon,
+        const SizedBox(height: 1),
+        Text(caption, style: widget.captionStyle),
+      ],
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../audio/sound_controller.dart';
 import '../fixed_step_clock.dart';
 import '../model/game_event.dart';
 import '../model/game_session.dart';
@@ -28,11 +29,13 @@ class PendulumFeedingGame extends FlameGame {
   /// [onGameFinished] is called with the final score once it ends.
   /// [showHitCircles] forces the debug hit circles on (true) or off (false)
   /// regardless of the compile-time flag; null follows the flag. The
-  /// how-to-play demo turns them on.
+  /// how-to-play demo turns them on. [sound] plays the effects; null is
+  /// silent.
   PendulumFeedingGame({
     required this.session,
     this.onGameFinished,
     bool? showHitCircles,
+    this.sound,
   }) : _showHitCircles = showHitCircles ?? StageStyle.showHitCircles,
        _clock = FixedStepClock(stepDt: session.config.fixedDt),
        super(
@@ -43,6 +46,9 @@ class PendulumFeedingGame extends FlameGame {
        );
 
   final GameSession session;
+
+  /// Plays the effects for what happens in the game, or null for none.
+  final SoundController? sound;
 
   /// Called with the final score as soon as the game has finished, before
   /// the result is shown (see [phase]), e.g. to start recording it.
@@ -125,8 +131,8 @@ class PendulumFeedingGame extends FlameGame {
     countdownNumber.value = session.countdownNumber;
   }
 
-  /// Plays the effect for [event]: score hearts, the groom's throw, or the
-  /// end of the game.
+  /// Plays the effect for [event]: score hearts and the eating sound, the
+  /// groom's throw and its sound, or the end of the game.
   void _handleEvent(GameEvent event) {
     switch (event) {
       case FoodEaten(:final mouthPosition, :final points, :final combo):
@@ -138,8 +144,10 @@ class PendulumFeedingGame extends FlameGame {
           ),
         );
         _effectTimeLeft = EatenEffect.duration;
+        sound?.playSfx(Sfx.eat);
       case FoodLaunched():
         _groom.playThrow();
+        sound?.playSfx(Sfx.throwFood);
       case GameFinished(:final score):
         // Events arrive in order, so a food eaten on the final step has
         // already started its effect.

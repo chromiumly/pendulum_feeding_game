@@ -16,6 +16,8 @@ import 'countdown_overlay.dart';
 import 'play_bonus_gauge.dart';
 import 'result_popup.dart';
 import 'setup_overlay.dart';
+import 'sound_button.dart';
+import 'sound_scope.dart';
 import 'title_screen.dart';
 
 /// Hosts one play-through at a time, with Flutter layers chosen by the
@@ -52,6 +54,7 @@ class _GameScreenState extends State<GameScreen> {
         gamesPlayed: widget.ranking?.gamesPlayed ?? 0,
       ),
       onGameFinished: (score) => _record(game, score),
+      sound: SoundScope.maybeOf(context),
     );
     return game;
   }
@@ -131,6 +134,7 @@ class _GameScreenState extends State<GameScreen> {
                 builder: (context, phase, _) => _overlay(game, phase),
               ),
             ),
+            const SoundButton(),
           ],
         ),
       ),

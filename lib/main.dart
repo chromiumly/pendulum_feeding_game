@@ -7,13 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app/app.dart';
+import 'audio/flame_sound_backend.dart';
+import 'audio/sound_controller.dart';
 import 'ranking/firebase_setup.dart';
 import 'ranking/firestore_ranking_repository.dart';
 import 'ranking/ranking_service.dart';
 import 'ranking/ranking_storage.dart';
 
 /// Starts the app: locks landscape, starts the ranking for the player in
-/// the launch URL, and shows the title screen.
+/// the launch URL, sets up sound (off), and shows the title screen.
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Honoured on mobile platforms; on the web LandscapeGuard covers portrait.
@@ -30,5 +32,8 @@ void main() {
   );
   unawaited(ranking.start());
 
-  runApp(PendulumFeedingApp(ranking: ranking));
+  // Sound is off until the player turns it on.
+  final sound = SoundController(FlameSoundBackend());
+
+  runApp(PendulumFeedingApp(ranking: ranking, sound: sound));
 }

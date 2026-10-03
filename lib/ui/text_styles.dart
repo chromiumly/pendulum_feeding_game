@@ -133,6 +133,15 @@ abstract final class GameTextStyles {
     fontWeight: FontWeight.w800,
     color: const Color(0xFFFFFFFF),
   );
+
+  /// The small ON / OFF under the sound button's icon. The caller sets the
+  /// colour.
+  static final soundCaption = _interBase.copyWith(
+    fontSize: 14,
+    fontWeight: FontWeight.w800,
+    shadows: const [],
+    height: 1,
+  );
   static final buttonLabel = _interBase.copyWith(
     fontSize: 20,
     fontWeight: FontWeight.w700,
