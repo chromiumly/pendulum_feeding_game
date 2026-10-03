@@ -27,6 +27,11 @@ enum Sfx {
 
 /// What actually makes the sound, so that tests can stand in for it.
 abstract interface class SoundBackend {
+  /// Called in the tap that turns sound on or off, at once and before
+  /// anything else: the moment browsers allow sound to be started. Must not
+  /// wait for anything.
+  void unlock();
+
   /// Makes the music audible. The first time it also starts it, from its
   /// beginning, looping from then on. After that the music has played on
   /// silently since [muteBgm], so this brings in the part it has reached
@@ -74,6 +79,11 @@ class SoundController extends ChangeNotifier {
   void setEnabled(bool enabled) {
     if (_enabled == enabled) return;
     _enabled = enabled;
+    try {
+      _backend.unlock();
+    } on Object catch (error) {
+      debugPrint('Sound failed: $error');
+    }
     _music = _music.then(
       (_) => _quietly(enabled ? _backend.unmuteBgm : _backend.muteBgm),
     );

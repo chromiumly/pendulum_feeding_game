@@ -13,8 +13,18 @@ class FakeSoundBackend implements SoundBackend {
   /// If set, unmuting the music waits for it.
   Completer<void>? unmuteGate;
 
+  /// How often [unlock] was called. Not in [calls], as it comes before the
+  /// music's calls, which wait in line.
+  int unlocks = 0;
+
   /// The effects played, in order.
   List<Sfx> get effects => calls.whereType<Sfx>().toList();
+
+  @override
+  void unlock() {
+    unlocks++;
+    if (failWith != null) throw failWith!;
+  }
 
   @override
   Future<void> unmuteBgm() async {

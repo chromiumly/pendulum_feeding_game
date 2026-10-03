@@ -1,4 +1,5 @@
-/// The sound backend that plays the game's files with flame_audio.
+/// The sound backend: the music with flame_audio, the effects with Web
+/// Audio.
 library;
 
 import 'dart:async';
@@ -8,9 +9,10 @@ import 'package:flame_audio/flame_audio.dart';
 import 'bgm_position.dart';
 import 'preloaded_effects.dart';
 import 'sound_controller.dart';
+import 'web_audio_effects.dart';
 
-/// Plays `assets/audio/bgm/bgm.mp3` as the music and [Sfx] files as the
-/// effects, through flame_audio.
+/// Plays `assets/audio/bgm/bgm.mp3` as the music, through flame_audio, and
+/// [Sfx] files as the effects, through Web Audio.
 ///
 /// The music is never muted by volume, which iPhones ignore for web audio.
 /// It is paused instead, and when sound comes back it jumps to where it
@@ -19,8 +21,11 @@ import 'sound_controller.dart';
 /// The music also pauses while the app is in the background, and picks up
 /// again when it returns, if it was playing.
 ///
-/// The effects are played from pools of players loaded when sound is first
-/// turned on, so that they start at once (see [PreloadedEffects]).
+/// The effects are decoded when sound is first turned on, so that they start
+/// at once (see [PreloadedEffects]), and played on one Web Audio context
+/// ([WebAudioEffects]). Not through flame_audio: on the web it makes a Web
+/// Audio context for every player, and Safari on iPhones allows only four,
+/// so effects went silent there. The music keeps its own one, two in all.
 class FlameSoundBackend implements SoundBackend {
   /// The music's file under `assets/audio/`.
   static const bgmFile = 'bgm/bgm.mp3';
@@ -33,12 +38,6 @@ class FlameSoundBackend implements SoundBackend {
   /// How loud the effects are, from 0 (silent) to 1 (full).
   static const sfxVolume = 1.0;
 
-  /// Players loaded ahead for each effect, and the most that play at once.
-  /// An effect lasts well over a second, and a throw and a meal can follow
-  /// each other quickly.
-  static const effectPlayersAhead = 2;
-  static const effectPlayersMost = 4;
-
   /// Whether the music has been started.
   bool _started = false;
 
@@ -49,20 +48,17 @@ class FlameSoundBackend implements SoundBackend {
   /// Where the music was when it was last silenced.
   Duration _positionAtMute = Duration.zero;
 
+  final _webAudio = WebAudioEffects();
+
   late final _effects = PreloadedEffects(
     volume: sfxVolume,
-    createPool: (sfx) async => _FlameEffectPool(
-      await FlameAudio.createPool(
-        sfx.file,
-        minPlayers: effectPlayersAhead,
-        maxPlayers: effectPlayersMost,
-      ),
-    ),
-    playOnce: (sfx) async {
-      final player = await FlameAudio.play(sfx.file, volume: sfxVolume);
-      return player.stop;
-    },
+    createPool: _webAudio.load,
+    // Before an effect is decoded: decoded on the spot, and played.
+    playOnce: (sfx) async => (await _webAudio.load(sfx)).start(sfxVolume),
   );
+
+  @override
+  void unlock() => _webAudio.unlock();
 
   @override
   Future<void> unmuteBgm() async {
@@ -107,16 +103,4 @@ class FlameSoundBackend implements SoundBackend {
 
   @override
   Future<void> stopSfx(Sfx sfx) => _effects.stop(sfx);
-}
-
-/// An [EffectPool] on flame_audio's [AudioPool].
-class _FlameEffectPool implements EffectPool {
-  _FlameEffectPool(this._pool);
-
-  final AudioPool _pool;
-
-  /// A player goes back to the pool by itself when its effect ends, and
-  /// the stop function does nothing after that.
-  @override
-  Future<StopEffect> start(double volume) => _pool.start(volume: volume);
 }

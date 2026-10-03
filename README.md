@@ -72,7 +72,7 @@ GitHub Pages への公開は CI が行う（[deployment.md](docs/deployment.md)�
 | 分野 | 使用しているもの |
 |---|---|
 | アプリ | Flutter（Web）、Dart |
-| ゲームエンジン | Flame（ゲームループ、描画、入力）、flame_audio（BGM と効果音） |
+| ゲームエンジン | Flame（ゲームループ、描画、入力）、flame_audio（BGM）、Web Audio（効果音） |
 | UI | flutter_svg（Figma から書き出したアイコン） |
 | バックエンド | Firebase（Cloud Firestore、セキュリティルール）、crypto（自己ベストのキーの SHA-256） |
 | 端末への保存 | shared_preferences |

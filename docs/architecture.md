@@ -14,7 +14,7 @@
 | `lib/app/` | Flutter の画面（タイトル、ゲーム、遊び方、リザルト、カウントダウンなど） |
 | `lib/ui/` | 色、文字スタイル、アセットのパス、表示用の書式、共通ウィジェット |
 | `lib/ranking/` | プレイヤー ID、記録とランキング、Firebase との接続 |
-| `lib/audio/` | 音の ON/OFF（`SoundController`）、BGM の位置の計算、flame_audio で鳴らす実装（`FlameSoundBackend`） |
+| `lib/audio/` | 音の ON/OFF（`SoundController`）、BGM の位置の計算、鳴らす実装（`FlameSoundBackend`。BGM は flame_audio、効果音は Web Audio の `WebAudioEffects`） |
 | `assets/` | ゲームに同梱する画像・アイコン・フォント（[assets.md](assets.md)） |
 | `art/` | 画像・音声・フォントの元データ。`tool/images.dart`、`tool/audio.dart`、`tool/fonts.dart` で `assets/` の画像・音声・フォントを作る |
 | `tool/` | 開発用スクリプト（画像と音声の作成、プレイヤー ID の管理、Firestore ルールのテスト、TS 版との比較データ作成） |
@@ -66,9 +66,12 @@
 - 実際に音を出す部分は `SoundBackend`（インターフェース）に分けてあり、本番は `FlameSoundBackend`（flame_audio）、テストは `test/audio/fake_sound_backend.dart` の偽物を使う。音の失敗（再生できないなど）はゲームに影響させず、静かなままにする。
 - **BGM の OFF は、音量ではなく一時停止**（iPhone の Web は音量を変えられないため）。ON に戻すときは、止めたときの位置に、止めていた時間を足した場所（曲の長さで折り返す。`positionAfterMute`）へ移動してから再開するので、裏で流れ続けていたのと同じように聞こえる。
 - コントローラーはアプリ全体で 1 つ（`main()` で作り、`PendulumFeedingApp` が `SoundScope` で全画面に渡す）。画面が変わっても BGM が途切れないのはこのため。渡さなければ無音で、ボタンも出ない（テストの既定）。
-- 効果音は、最初に ON にしたときに**あらかじめ読み込んだ再生用の部品**（`PreloadedEffects`、flame_audio の `AudioPool`）から鳴らす。鳴らすたびに新しい部品を作って読み込むと、鳴るのが遅れるため。部品の準備ができていない間や、失敗したときは、1 回きりの部品で鳴らす（今までの方法）。
+- 効果音は、最初に ON にしたときに**あらかじめ読み込んで復号しておき**（`PreloadedEffects`）、鳴らすときはその場で再生する。鳴らすたびに読み込むと、鳴るのが遅れるため。
+- 効果音は、**Web Audio の `AudioContext` 1 つ**で鳴らす（`WebAudioEffects`、`lib/audio/web_audio_effects_web.dart`）。flame_audio（audioplayers）は Web でプレイヤーごとに `AudioContext` を作るが、**iPhone の Safari は 1 ページに 4 つまで**しか作れず、閉じない限り枠が戻らない。効果音を flame_audio のプレイヤーで鳴らしていた頃は、iPhone で効果音が鳴らなくなった。BGM だけは flame_audio のままで、`AudioContext` は合わせて 2 つ。
+- Safari は、ユーザーが触れている間しか `AudioContext` を動かさない。そのため、音の ON/OFF のタップの中で、待たずにすぐ `SoundBackend.unlock` を呼んで動かす（`SoundController.setEnabled`）。スマホが止めたとき（バックグラウンドから戻ったときなど）のために、画面に触れるたびに、止まっていれば動かし直す。
+- `web_audio_effects.dart` は、Web では本物、テスト（Dart VM）では何も鳴らさない代わり（`web_audio_effects_stub.dart`）を読み込む（条件付き import）。Web Audio の部分は、自動テストでは確かめられないので、実機で確認する。
 - 効果音は `GameEvent` から鳴らす（`PendulumFeedingGame._handleEvent`）。ゲームのルール側（`GameSession`）は音を知らない。「START」のホイッスルは `StartCueShown` イベント、リザルトの拍手は、リザルトが実際に出る切り替え（`_publish`）で鳴らす。
-- 鳴っている効果音は止められる（`SoundController.stopSfx`）。`PreloadedEffects` が、鳴らした効果音の止める関数（`AudioPool.start` が返す）を覚えていて、鳴らす途中で止める指示が来た分も止める。結果画面の「もう一度」「タイトルへ」が、拍手を止める（`GameScreen`）。
+- 鳴っている効果音は止められる（`SoundController.stopSfx`）。`PreloadedEffects` が、鳴らした効果音の止める関数（再生ごとに返る）を覚えていて、鳴らす途中で止める指示が来た分も止める。結果画面の「もう一度」「タイトルへ」が、拍手を止める（`GameScreen`）。
 - ボタン（`SoundButton`）は、タイトル画面とゲーム画面の `Stack` の最後に置く。リザルトなどのぼかしの上でも、くっきり押せる。
 
 ## テスト

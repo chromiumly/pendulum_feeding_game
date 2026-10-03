@@ -94,6 +94,24 @@ void main() {
     },
   );
 
+  test('every switch unlocks the backend at once, in the tap', () {
+    // No await: browsers only let sound start while the tap is handled.
+    sound.toggle();
+    expect(backend.unlocks, 1);
+    sound.toggle();
+    expect(backend.unlocks, 2);
+    // Setting it to what it is already is no switch.
+    sound.setEnabled(false);
+    expect(backend.unlocks, 2);
+  });
+
+  test('an unlock that fails does not stop sound from turning on', () async {
+    backend.failWith = StateError('no audio');
+    expect(() => sound.setEnabled(true), returnsNormally);
+    expect(sound.enabled, isTrue);
+    await pumpEventQueue();
+  });
+
   test('a failing backend does not break the game', () async {
     backend.failWith = StateError('autoplay blocked');
     expect(() => sound.setEnabled(true), returnsNormally);

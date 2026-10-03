@@ -8,7 +8,7 @@ import 'sound_controller.dart';
 /// Cuts off one play of an effect. Does nothing if that play has ended.
 typedef StopEffect = Future<void> Function();
 
-/// The players of one effect, loaded and ready to start at once.
+/// One effect, loaded and ready to start at once.
 abstract interface class EffectPool {
   /// Starts the effect from its beginning at [volume] (0 to 1), over any run
   /// of it still playing. Returns what cuts this play off.
@@ -17,12 +17,13 @@ abstract interface class EffectPool {
 
 /// Plays the [Sfx] effects from pools made ahead of time.
 ///
-/// Playing from a new player each time means fetching and preparing the
-/// file after the throw, which is heard as the effect starting late. A pool
-/// has its players loaded already, so an effect starts at once.
+/// Loading an effect when it is to be played means fetching and preparing
+/// the file after the throw, which is heard as the effect starting late. A
+/// "pool" (an [EffectPool]) has it loaded already, so an effect starts at
+/// once.
 ///
 /// Until the pools are ready, and for any effect whose pool fails, an
-/// effect is played the old way, from a player made for it alone. Sound
+/// effect is played the old way, loaded for that play alone. Sound
 /// never fails to play only because the pools did.
 class PreloadedEffects {
   /// [createPool] makes the pool of an effect. [playOnce] plays an effect
