@@ -18,7 +18,7 @@ GameSession _playingSession(GameConfig config, {required int stepsLeft}) {
   while (session.phase != GamePhase.playing) {
     session.step();
   }
-  for (var i = 0; i < config.timeLimitSteps - stepsLeft; i++) {
+  for (var i = 0; i < config.timeLimitSteps! - stepsLeft; i++) {
     session.step();
   }
   return session;

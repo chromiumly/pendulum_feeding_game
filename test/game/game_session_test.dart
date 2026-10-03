@@ -559,7 +559,7 @@ void main() {
         foodHitRadius: 10,
       );
       final session = _session(config);
-      final limit = config.timeLimitSteps;
+      final limit = config.timeLimitSteps!;
       runSteps(session, limit - 10);
       _throw(session, const Vec2(0, 300));
       session.takeEvents();
@@ -586,7 +586,7 @@ void main() {
 
     test('a food that misses after the time limit ends the game', () {
       final session = _session();
-      final limit = session.config.timeLimitSteps;
+      final limit = session.config.timeLimitSteps!;
       runSteps(session, limit - 5);
       // Straight right, out of the world after about 10 steps.
       _throw(session, const Vec2(900, 0));
@@ -612,7 +612,7 @@ void main() {
       'while a buzzer beater flies, the pendulum moves and no one throws',
       () {
         final session = _session();
-        final limit = session.config.timeLimitSteps;
+        final limit = session.config.timeLimitSteps!;
         runSteps(session, limit - 1);
         _throw(session, const Vec2(0, -600)); // Up, so it flies a while.
         runSteps(session, 1);

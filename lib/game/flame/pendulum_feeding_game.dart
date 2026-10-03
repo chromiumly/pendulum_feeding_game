@@ -21,14 +21,20 @@ import 'stage_style.dart';
 /// its state, turn session events into effects, and publish the phase for the
 /// Flutter overlays.
 class PendulumFeedingGame extends FlameGame {
-  PendulumFeedingGame({required this.session, this.onGameFinished})
-    : _clock = FixedStepClock(stepDt: session.config.fixedDt),
-      super(
-        camera: CameraComponent.withFixedResolution(
-          width: session.config.worldSize.x,
-          height: session.config.worldSize.y,
-        ),
-      );
+  /// [showHitCircles] forces the debug hit circles on regardless of the
+  /// compile-time flag, e.g. for the how-to-play demo.
+  PendulumFeedingGame({
+    required this.session,
+    this.onGameFinished,
+    bool? showHitCircles,
+  }) : _showHitCircles = showHitCircles ?? StageStyle.showHitCircles,
+       _clock = FixedStepClock(stepDt: session.config.fixedDt),
+       super(
+         camera: CameraComponent.withFixedResolution(
+           width: session.config.worldSize.x,
+           height: session.config.worldSize.y,
+         ),
+       );
 
   final GameSession session;
 
@@ -36,6 +42,7 @@ class PendulumFeedingGame extends FlameGame {
   /// the result is shown (see [phase]), e.g. to start recording it.
   final void Function(int score)? onGameFinished;
 
+  final bool _showHitCircles;
   final FixedStepClock _clock;
   late final GroomComponent _groom = GroomComponent(session);
 
@@ -82,7 +89,7 @@ class PendulumFeedingGame extends FlameGame {
       BrideComponent(session),
       PendulumComponent(session),
       FoodComponent(session),
-      if (StageStyle.showHitCircles) HitCirclesComponent(session),
+      if (_showHitCircles) HitCirclesComponent(session),
       AimGuideComponent(session),
       HudComponent(session),
       InputLayer(session),

@@ -18,12 +18,10 @@ class HudComponent extends Component {
   @override
   void render(Canvas canvas) {
     if (session.phase case GamePhase.setup || GamePhase.countdown) return;
+    final remaining = session.remainingSeconds;
+    final time = remaining.isInfinite ? '∞' : remaining.ceil().toString();
     _textPaint
       ..render(canvas, 'SCORE ${formatScore(session.score)}', Vector2(555, 3))
-      ..render(
-        canvas,
-        'TIME ${session.remainingSeconds.ceil()}',
-        Vector2(739, 3),
-      );
+      ..render(canvas, 'TIME $time', Vector2(739, 3));
   }
 }

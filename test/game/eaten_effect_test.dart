@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/game/flame/components/eaten_effect.dart';
+import 'package:pendulum_feeding_game/game/model/rules.dart';
+import 'package:pendulum_feeding_game/ui/format.dart';
 
 void main() {
   test('a heart per food in a row, a big one for every 5', () {
@@ -29,5 +31,10 @@ void main() {
     expect(left.offset.y, lessThan(0));
     expect(right.offset.x, greaterThan(40));
     expect(right.offset.y, greaterThan(0));
+  });
+
+  test('the combo label joins the count to the word', () {
+    expect(formatCombo(3, comboMultiplier(3)), '3COMBO ×1.4');
+    expect(formatCombo(20, comboMultiplier(20)), '20COMBO ×4.8');
   });
 }

@@ -7,6 +7,7 @@ import 'package:flutter/animation.dart';
 import 'package:flutter/painting.dart';
 
 import '../../../ui/assets.dart';
+import '../../../ui/format.dart';
 import '../../../ui/text_styles.dart';
 import '../../model/rules.dart';
 
@@ -97,7 +98,7 @@ class EatenEffect extends Component with HasGameReference<FlameGame> {
   late final _hearts = heartLayout(combo);
   late final String _pointsText = '+$points';
   late final String? _comboText = combo >= 2
-      ? 'COMBO ×${comboMultiplier(combo).toStringAsFixed(1)}'
+      ? formatCombo(combo, comboMultiplier(combo))
       : null;
 
   @override

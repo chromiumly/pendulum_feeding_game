@@ -8,6 +8,7 @@ import '../ui/text_styles.dart';
 import '../ui/widgets/outlined_text.dart';
 import '../ui/widgets/popup_panel.dart';
 import '../ui/widgets/round_icon_button.dart';
+import 'how_to_play_game.dart';
 import 'how_to_play_tips.dart';
 
 /// The 563x340 how-to-play popup (Figma: 遊び方画面（1/2）and（2/2）), in two
@@ -71,9 +72,13 @@ class _HowToPlayPopupState extends State<HowToPlayPopup> {
     );
   }
 
-  /// Page 1/2. The playable game below the lead text comes next.
+  /// Page 1/2: the lead text and the playable demo (Figma: ゲーム画面). Real
+  /// play replaces Figma's static mockup and its drag-hint icon: the lead
+  /// text and the game's own aim guide (dots and arrow while dragging)
+  /// explain the controls instead.
   List<Widget> _controlsPage() => [
     _lead(top: 70, 'ドラッグして食べ物を投げよう！\n新婦の口元にあたると得点が入るよ'),
+    const HowToPlayGame(),
     Positioned(
       left: 477,
       top: 254,
@@ -88,7 +93,7 @@ class _HowToPlayPopupState extends State<HowToPlayPopup> {
   /// Page 2/2.
   List<Widget> _tipsPage() => [
     const Positioned(left: 30, top: 85, child: HowToPlayTips()),
-    _lead(top: 269, 'ハイスコアを目指して頑張ろう！\n何か良いことがあるかも...？', outlined: true),
+    _lead(top: 269, 'ハイスコアを目指して頑張ろう！\n何か良いことがあるかも...？'),
     Positioned(
       left: 487,
       top: 254,
@@ -100,26 +105,19 @@ class _HowToPlayPopupState extends State<HowToPlayPopup> {
     ),
   ];
 
-  /// [outlined] adds Figma's 2 px light outline, as on page 2.
-  static Widget _lead(
-    String text, {
-    required double top,
-    bool outlined = false,
-  }) => Positioned(
+  static Widget _lead(String text, {required double top}) => Positioned(
     left: 30,
     top: top,
     width: 276,
     height: 40,
     child: Align(
       alignment: Alignment.centerLeft,
-      child: outlined
-          ? OutlinedText(
-              text,
-              style: GameTextStyles.howToLead,
-              outlineWidth: 2,
-              textAlign: TextAlign.left,
-            )
-          : Text(text, style: GameTextStyles.howToLead),
+      child: OutlinedText(
+        text,
+        style: GameTextStyles.howToLead,
+        outlineWidth: 2,
+        textAlign: TextAlign.left,
+      ),
     ),
   );
 }

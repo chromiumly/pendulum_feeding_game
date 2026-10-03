@@ -65,7 +65,8 @@ class GameConfig {
   /// Simulation step [s]. The game always advances in steps of this size.
   final double fixedDt;
 
-  final int timeLimitSeconds;
+  /// Null for no time limit (the how-to-play demo): play never ends.
+  final int? timeLimitSeconds;
 
   final PendulumParams pendulumParams;
 
@@ -145,7 +146,8 @@ class GameConfig {
   /// Grab distance from the bride's node-to-mouth segment [px].
   final double setupBrideGrabRadius;
 
-  int get timeLimitSteps => (timeLimitSeconds / fixedDt).round();
+  int? get timeLimitSteps =>
+      timeLimitSeconds == null ? null : (timeLimitSeconds! / fixedDt).round();
 
   int get countdownSteps => (countdownSeconds / fixedDt).round();
 

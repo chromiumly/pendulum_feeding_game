@@ -1,8 +1,12 @@
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/app/app.dart';
 import 'package:pendulum_feeding_game/app/how_to_play_popup.dart';
 import 'package:pendulum_feeding_game/app/result_popup.dart';
+import 'package:pendulum_feeding_game/game/flame/components/stage_components.dart';
+import 'package:pendulum_feeding_game/game/flame/pendulum_feeding_game.dart';
+import 'package:pendulum_feeding_game/game/model/game_session.dart';
 import 'package:pendulum_feeding_game/ranking/ranking_models.dart';
 
 void main() {
@@ -69,6 +73,45 @@ void main() {
     expect(find.text('TAP TO START'), findsOneWidget);
   });
 
+  testWidgets('page 1 of the how-to popup has a real, unlimited-time game', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    await tester.tap(find.bySemanticsLabel('遊び方'));
+    await tester.pump();
+
+    // Let the demo's sprites load and the session leave its (invisible,
+    // instant) countdown.
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump(const Duration(microseconds: 16667));
+    }
+
+    final game = tester
+        .widget<GameWidget<PendulumFeedingGame>>(
+          find.byType(GameWidget<PendulumFeedingGame>),
+        )
+        .game!;
+    expect(game.session.phase, GamePhase.playing);
+    expect(game.session.config.timeLimitSeconds, isNull);
+    // Both the mouth and the food hit circles are shown here, unlike the
+    // real game, where they are a debug-only overlay.
+    expect(game.world.children.whereType<HitCirclesComponent>(), hasLength(1));
+
+    // The time limit never arrives, however long it plays.
+    for (var i = 0; i < 300; i++) {
+      game.session.step();
+    }
+    expect(game.session.isTimeUp, isFalse);
+    expect(game.session.isFinished, isFalse);
+  });
+
   testWidgets('the how-to popup pages to the tips and back', (tester) async {
     tester.view.physicalSize = const Size(844, 390);
     tester.view.devicePixelRatio = 1;
@@ -86,7 +129,7 @@ void main() {
     expect(find.text('+150'), findsOneWidget);
     expect(find.text('+105'), findsOneWidget);
     expect(find.text('+55'), findsOneWidget);
-    expect(find.text('COMBO ×1.6'), findsOneWidget);
+    expect(find.text('4COMBO ×1.6'), findsOneWidget);
     expect(find.text('+168'), findsOneWidget);
     expect(find.text('13.3%'), findsOneWidget);
 

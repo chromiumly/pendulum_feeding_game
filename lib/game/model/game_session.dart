@@ -126,8 +126,11 @@ class GameSession {
   bool get isFinished => _phase == GamePhase.finished;
 
   /// The time limit has been reached; no more throws. The game may still be
-  /// playing out a buzzer beater.
-  bool get isTimeUp => _elapsedSteps >= config.timeLimitSteps;
+  /// playing out a buzzer beater. Never, without a time limit.
+  bool get isTimeUp {
+    final steps = config.timeLimitSteps;
+    return steps != null && _elapsedSteps >= steps;
+  }
 
   /// The handle being dragged on the setup screen, if any.
   SetupHandle? get activeHandle => _placement?.handle;
@@ -140,8 +143,13 @@ class GameSession {
     return (remaining + stepsPerSecond - 1) ~/ stepsPerSecond;
   }
 
-  double get remainingSeconds =>
-      (config.timeLimitSteps - _elapsedSteps) * config.fixedDt;
+  /// Infinite without a time limit.
+  double get remainingSeconds {
+    final steps = config.timeLimitSteps;
+    return steps == null
+        ? double.infinity
+        : (steps - _elapsedSteps) * config.fixedDt;
+  }
 
   Vec2 get mouthPosition => brideMouthPosition(
     lowerNode: _pendulumPositions.lower,

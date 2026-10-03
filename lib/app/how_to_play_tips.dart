@@ -4,6 +4,7 @@ import '../game/model/food.dart';
 import '../game/model/game_config.dart';
 import '../game/model/rules.dart';
 import '../ui/assets.dart';
+import '../ui/format.dart';
 import '../ui/palette.dart';
 import '../ui/text_styles.dart';
 import '../ui/widgets/bonus_gauge_bar.dart';
@@ -163,7 +164,7 @@ class _ComboCard extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: _text(
-              'COMBO ×${comboMultiplier(_combo).toStringAsFixed(1)}',
+              formatCombo(_combo, comboMultiplier(_combo)),
               GameTextStyles.cardCombo,
             ),
           ),
