@@ -26,4 +26,15 @@ void main() {
     // Run `dart run tool/images.dart` after changing art/food/.
     expect(_pngNames('art/food'), _pngNames('assets/images/food'));
   });
+
+  test('every other image is made from its art', () {
+    // Run `dart run tool/images.dart` after changing art/.
+    for (final dir in ['effects', 'bride', 'groom', 'pendulum']) {
+      expect(
+        _pngNames('assets/images/$dir'),
+        _pngNames('art/$dir'),
+        reason: dir,
+      );
+    }
+  });
 }

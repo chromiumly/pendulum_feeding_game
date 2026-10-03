@@ -2,6 +2,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/app/app.dart';
+import 'package:pendulum_feeding_game/app/how_to_play_game.dart';
 import 'package:pendulum_feeding_game/app/how_to_play_popup.dart';
 import 'package:pendulum_feeding_game/app/result_popup.dart';
 import 'package:pendulum_feeding_game/game/flame/components/stage_components.dart';
@@ -110,6 +111,38 @@ void main() {
     }
     expect(game.session.isTimeUp, isFalse);
     expect(game.session.isFinished, isFalse);
+  });
+
+  testWidgets('the drag hint hides on touch and returns after 5 s idle', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    await tester.tap(find.bySemanticsLabel('遊び方'));
+    await tester.pump();
+    final hint = find.byKey(HowToPlayGame.hintKey);
+    expect(hint, findsOneWidget);
+
+    // The demo box, inside the popup at (140, 25).
+    const center = Offset(
+      140 + HowToPlayGame.left + 211,
+      25 + HowToPlayGame.top + 97,
+    );
+    final gesture = await tester.startGesture(center);
+    await tester.pump();
+    expect(hint, findsNothing);
+    // Still hidden while held, however long.
+    await tester.pump(const Duration(seconds: 6));
+    expect(hint, findsNothing);
+
+    await gesture.up();
+    await tester.pump(const Duration(seconds: 4));
+    expect(hint, findsNothing);
+    await tester.pump(const Duration(milliseconds: 1100));
+    expect(hint, findsOneWidget);
   });
 
   testWidgets('the how-to popup pages to the tips and back', (tester) async {

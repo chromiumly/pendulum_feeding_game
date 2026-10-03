@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
 import 'package:flutter/widgets.dart';
 
@@ -5,6 +7,7 @@ import '../game/flame/pendulum_feeding_game.dart';
 import '../game/model/game_config.dart';
 import '../game/model/game_session.dart';
 import '../physics/double_pendulum.dart';
+import '../ui/assets.dart';
 import '../ui/widgets/stage.dart';
 
 /// Where the how-to-play demo starts, and stays near: both rods at the same
@@ -34,10 +37,13 @@ final howToPlayGameConfig = GameConfig(
 );
 
 /// Plays the demo at its Figma position and size inside the how-to-play
-/// popup (147, 252, 422, 195): a quarter of the full 844x390 stage.
+/// popup (30, 122, 422, 195): the full 844x390 stage at half size.
 ///
 /// A fresh [GameSession] each time this widget is built, so that leaving
 /// and returning to this page starts over.
+///
+/// A hand shows how to drag until the player touches the game, and again
+/// after [hintIdle] without a touch.
 class HowToPlayGame extends StatefulWidget {
   const HowToPlayGame({super.key});
 
@@ -48,6 +54,11 @@ class HowToPlayGame extends StatefulWidget {
   static const top = 122.0;
   static const size = Size(422, 195);
 
+  static const hintIdle = Duration(seconds: 5);
+
+  /// The drag hint, while it is shown.
+  static const hintKey = Key('howToPlayDragHint');
+
   @override
   State<HowToPlayGame> createState() => _HowToPlayGameState();
 }
@@ -57,6 +68,27 @@ class _HowToPlayGameState extends State<HowToPlayGame> {
     session: GameSession(config: howToPlayGameConfig),
     showHitCircles: true,
   )..startCountdown();
+
+  bool _showHint = true;
+  Timer? _idle;
+
+  void _onTouch() {
+    _idle?.cancel();
+    if (_showHint) setState(() => _showHint = false);
+  }
+
+  void _onRelease() {
+    _idle?.cancel();
+    _idle = Timer(HowToPlayGame.hintIdle, () {
+      if (mounted) setState(() => _showHint = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _idle?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,13 +104,87 @@ class _HowToPlayGameState extends State<HowToPlayGame> {
         child: SizedBox(
           width: howToPlayGameConfig.worldSize.x,
           height: howToPlayGameConfig.worldSize.y,
-          child: Stack(
-            children: [
-              const StageBackground(),
-              GameWidget(game: _game),
-            ],
+          // Listener does not take part in the gesture arena, so the game
+          // still gets every drag.
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => _onTouch(),
+            onPointerUp: (_) => _onRelease(),
+            onPointerCancel: (_) => _onRelease(),
+            child: Stack(
+              children: [
+                const StageBackground(),
+                GameWidget(game: _game),
+                if (_showHint) const _DragHint(key: HowToPlayGame.hintKey),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A hand that presses beside the groom and drags to the lower right, over
+/// and over, in world coordinates. Drawing only: it does not throw.
+class _DragHint extends StatefulWidget {
+  const _DragHint({super.key});
+
+  @override
+  State<_DragHint> createState() => _DragHintState();
+}
+
+class _DragHintState extends State<_DragHint>
+    with SingleTickerProviderStateMixin {
+  /// Figma: ドラッグ, 25x37 at (614, 226) / 2 in the half-size demo.
+  static const _size = Size(50, 74);
+  static const _start = Offset(614, 226);
+  static const _drag = Offset(100, 70);
+
+  /// One press, drag and release, starting afresh each time it is shown.
+  late final _cycle = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _cycle.dispose();
+    super.dispose();
+  }
+
+  /// [t] from [from] to [to] as 0 to 1.
+  static double _part(double t, double from, double to) =>
+      ((t - from) / (to - from)).clamp(0.0, 1.0);
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _cycle,
+        builder: (context, child) {
+          final t = _cycle.value;
+          // Fade in, press, drag, release, fade out.
+          final opacity = t < 0.8 ? _part(t, 0, 0.12) : 1 - _part(t, 0.8, 1);
+          final press = _part(t, 0.12, 0.22) - _part(t, 0.7, 0.8);
+          final move = Curves.easeInOut.transform(_part(t, 0.22, 0.7));
+          final topLeft = _start + _drag * move;
+          return Stack(
+            children: [
+              Positioned(
+                left: topLeft.dx,
+                top: topLeft.dy,
+                width: _size.width,
+                height: _size.height,
+                child: Opacity(
+                  opacity: opacity,
+                  child: Transform.scale(scale: 1 - 0.1 * press, child: child),
+                ),
+              ),
+            ],
+          );
+        },
+        child: Image.asset(GameAssets.dragHand),
       ),
     );
   }

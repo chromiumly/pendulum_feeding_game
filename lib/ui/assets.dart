@@ -1,4 +1,5 @@
-/// Asset paths. Images and icons are exported from the Figma design.
+/// Asset paths. Images and icons are exported from the Figma design; images
+/// are made by tool/images.dart from the originals in art/.
 abstract final class GameAssets {
   static const background = 'assets/images/background/background.png';
   static const bride = 'assets/images/bride/bride.png';
@@ -20,6 +21,9 @@ abstract final class GameAssets {
   /// Shown around the bride when she eats. Made by tool/images.dart from
   /// art/effects/.
   static const heart = 'assets/images/effects/heart.png';
+
+  /// The hand that shows how to drag in the how-to-play demo.
+  static const dragHand = 'assets/images/effects/drag_hand.png';
 
   /// Made by tool/images.dart from the art in art/food/.
   static String food(String id) => 'assets/images/food/$id.png';
