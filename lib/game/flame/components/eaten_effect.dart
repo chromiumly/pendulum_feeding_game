@@ -12,9 +12,8 @@ import '../../../ui/text_styles.dart';
 import '../../model/rules.dart';
 
 /// When the bride eats (Figma: ゲーム画面（得点シーン）): a heart for each
-/// food in a row pops up around her mouth, with the points gained and, from
-/// the second food in a row, the combo multiplier. Everything drifts up and
-/// fades out.
+/// food in a row pops up around her mouth, with the points gained and the
+/// combo (1COMBO ×1.0 for the first). Everything drifts up and fades out.
 ///
 /// Like birthday candles, every [heartsPerBigHeart] foods in a row show as
 /// one big heart, so that long combos do not crowd the bride.
@@ -97,9 +96,7 @@ class EatenEffect extends Component with HasGameReference<FlameGame> {
 
   late final _hearts = heartLayout(combo);
   late final String _pointsText = '+$points';
-  late final String? _comboText = combo >= 2
-      ? formatCombo(combo, comboMultiplier(combo))
-      : null;
+  late final String _comboText = formatCombo(combo, comboMultiplier(combo));
 
   @override
   void onLoad() {
@@ -137,15 +134,12 @@ class EatenEffect extends Component with HasGameReference<FlameGame> {
       }
     }
 
-    final comboText = _comboText;
-    if (comboText != null) {
-      _label(GameTextStyles.eatenCombo, opacity).render(
-        canvas,
-        comboText,
-        _mouth + _comboOffset + lift,
-        anchor: Anchor.centerLeft,
-      );
-    }
+    _label(GameTextStyles.eatenCombo, opacity).render(
+      canvas,
+      _comboText,
+      _mouth + _comboOffset + lift,
+      anchor: Anchor.centerLeft,
+    );
     _label(GameTextStyles.eatenPoints, opacity).render(
       canvas,
       _pointsText,

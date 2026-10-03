@@ -34,6 +34,7 @@ void main() {
   });
 
   test('the combo label joins the count to the word', () {
+    expect(formatCombo(1, comboMultiplier(1)), '1COMBO ×1.0');
     expect(formatCombo(3, comboMultiplier(3)), '3COMBO ×1.4');
     expect(formatCombo(20, comboMultiplier(20)), '20COMBO ×4.8');
   });
