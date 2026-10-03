@@ -1,3 +1,6 @@
+/// The playable demo on page 1 of the how-to-play popup, with its drag hint.
+library;
+
 import 'dart:async';
 
 import 'package:flame/game.dart';
@@ -70,13 +73,17 @@ class _HowToPlayGameState extends State<HowToPlayGame> {
   )..startCountdown();
 
   bool _showHint = true;
+
+  /// Brings the hint back after [HowToPlayGame.hintIdle] without a touch.
   Timer? _idle;
 
+  /// Hides the hint while the player touches the game.
   void _onTouch() {
     _idle?.cancel();
     if (_showHint) setState(() => _showHint = false);
   }
 
+  /// Starts the wait to bring the hint back once the finger is lifted.
   void _onRelease() {
     _idle?.cancel();
     _idle = Timer(HowToPlayGame.hintIdle, () {
@@ -153,7 +160,8 @@ class _DragHintState extends State<_DragHint>
     super.dispose();
   }
 
-  /// [t] from [from] to [to] as 0 to 1.
+  /// Returns [t] from [from] to [to] as 0 to 1, clamped; all are fractions
+  /// of the animation cycle.
   static double _part(double t, double from, double to) =>
       ((t - from) / (to - from)).clamp(0.0, 1.0);
 

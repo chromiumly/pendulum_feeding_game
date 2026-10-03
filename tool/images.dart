@@ -1,29 +1,31 @@
-// Images for the game, made from the original art in art/: trimmed and
-// scaled down to what the game needs.
-//
-//   dart run tool/images.dart
-//
-// Foods (art/food/ -> assets/images/food/) are sized to look about the same
-// size: each image is trimmed to its visible pixels and scaled so that
-// sqrt(equivalent diameter x long side) is [_visualSize] display px. The
-// equivalent diameter is that of a circle with the image's visible area.
-// Matching the area alone would make tall or wide foods (parfait, sushi)
-// very long; matching the long side alone would make them look small. The
-// geometric mean of the two is in between.
-//
-// The output is [_density] times the display size, for sharp drawing on
-// high-density phone screens. The game draws every food image at
-// 1 / [_density] (GameAssets.foodImageDensity), so the sizes chosen here are
-// the sizes on the stage.
-//
-// Every other image (art/<dir>/ -> assets/images/<dir>/) is listed in
-// [_sprites] and scaled to [_density] times the largest width the game draws
-// it at. Images placed by anchors measured on the whole canvas (bride,
-// groom, pivot) keep their transparent margins, so that the anchors still
-// fit.
-//
-// The background is not made here: at 1376x636 it is not much larger than
-// the screen.
+/// Images for the game, made from the original art in art/: trimmed and
+/// scaled down to what the game needs.
+///
+///   dart run tool/images.dart
+///
+/// Foods (art/food/ -> assets/images/food/) are sized to look about the same
+/// size: each image is trimmed to its visible pixels and scaled so that
+/// sqrt(equivalent diameter x long side) is [_visualSize] display px. The
+/// equivalent diameter is that of a circle with the image's visible area.
+/// Matching the area alone would make tall or wide foods (parfait, sushi)
+/// very long; matching the long side alone would make them look small. The
+/// geometric mean of the two is in between.
+///
+/// The output is [_density] times the display size, for sharp drawing on
+/// high-density phone screens. The game draws every food image at
+/// 1 / [_density] (GameAssets.foodImageDensity), so the sizes chosen here are
+/// the sizes on the stage.
+///
+/// Every other image (`art/<dir>/` -> `assets/images/<dir>/`) is listed in
+/// [_sprites] and scaled to [_density] times the largest width the game draws
+/// it at. Images placed by anchors measured on the whole canvas (bride,
+/// groom, pivot) keep their transparent margins, so that the anchors still
+/// fit.
+///
+/// The background is not made here: at 1376x636 it is not much larger than
+/// the screen.
+library;
+
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -55,6 +57,8 @@ const _sprites = {
   'pendulum/pivot.png': (width: 18 * 1.8, trim: false),
 };
 
+/// Makes every image in assets/images/ from art/. Run from the project
+/// root.
 void main() {
   if (!File('pubspec.yaml').existsSync()) {
     stderr.writeln('Run from the project root.');
@@ -64,6 +68,7 @@ void main() {
   _otherSprites();
 }
 
+/// Makes the food images, sized to look alike, and prints their sizes.
 void _foods() {
   final output = Directory('assets/images/food')..createSync(recursive: true);
   stdout.writeln('food                 display    eq.diam  bytes');
@@ -92,6 +97,8 @@ void _foods() {
   }
 }
 
+/// Makes every image listed in [_sprites], and prints their sizes. Exits
+/// with an error for an image in art/ that is not listed.
 void _otherSprites() {
   stdout.writeln('\nimage                     display    bytes');
   final sources = [
@@ -123,6 +130,7 @@ void _otherSprites() {
   }
 }
 
+/// Returns the PNG files directly in [dir], sorted by path.
 List<File> _pngs(Directory dir) =>
     dir
         .listSync()
@@ -131,8 +139,8 @@ List<File> _pngs(Directory dir) =>
         .toList()
       ..sort((a, b) => a.path.compareTo(b.path));
 
-/// [source] decoded in floating point, and unless [trim] is false, trimmed to
-/// its visible pixels.
+/// Returns [source] decoded in floating point, and unless [trim] is false,
+/// trimmed to its visible pixels. Exits with an error if it is not a PNG.
 img.Image _load(File source, {bool trim = true}) {
   final original = img.decodePng(source.readAsBytesSync());
   if (original == null) {
@@ -143,7 +151,7 @@ img.Image _load(File source, {bool trim = true}) {
   return trim ? _trim(image) : image;
 }
 
-/// [image] cropped to its non-transparent pixels.
+/// Returns [image] cropped to its non-transparent pixels.
 img.Image _trim(img.Image image) {
   var left = image.width, top = image.height, right = -1, bottom = -1;
   for (final pixel in image) {
@@ -162,6 +170,7 @@ img.Image _trim(img.Image image) {
   );
 }
 
+/// Returns how many pixels of [image] are at least [_visibleAlpha] opaque.
 int _visibleArea(img.Image image) {
   var area = 0;
   for (final pixel in image) {
@@ -170,8 +179,9 @@ int _visibleArea(img.Image image) {
   return area;
 }
 
-/// Scales [image] by [scale] with premultiplied alpha, so that the colour of
-/// fully transparent pixels (often black) does not darken the edges.
+/// Returns [image] scaled by [scale] (below 1 to shrink) with premultiplied
+/// alpha, so that the colour of fully transparent pixels (often black) does
+/// not darken the edges.
 img.Image _resize(img.Image image, double scale) {
   for (final pixel in image) {
     final a = pixel.aNormalized;

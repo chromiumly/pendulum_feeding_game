@@ -1,3 +1,6 @@
+/// The cream tile buttons.
+library;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -17,7 +20,10 @@ class TileButton extends StatefulWidget {
 
   /// SVG asset path. It is drawn at its own size, centred on the icon slot.
   final String icon;
+
+  /// Text under the icon.
   final String label;
+
   final VoidCallback onPressed;
 
   @override
@@ -25,8 +31,10 @@ class TileButton extends StatefulWidget {
 }
 
 class _TileButtonState extends State<TileButton> {
+  /// Whether a finger is down on the button, which shows it pressed.
   bool _pressed = false;
 
+  /// Shows the button pressed or released.
   void _setPressed(bool pressed) {
     if (_pressed != pressed) setState(() => _pressed = pressed);
   }
@@ -109,6 +117,8 @@ class IconTileButton extends StatefulWidget {
   /// SVG asset path, drawn at [iconSize] in the centre.
   final String icon;
   final Size iconSize;
+
+  /// What screen readers announce.
   final String semanticLabel;
   final VoidCallback onPressed;
 
@@ -117,8 +127,10 @@ class IconTileButton extends StatefulWidget {
 }
 
 class _IconTileButtonState extends State<IconTileButton> {
+  /// Whether a finger is down on the button, which shows it pressed.
   bool _pressed = false;
 
+  /// Shows the button pressed or released.
   void _setPressed(bool pressed) {
     if (_pressed != pressed) setState(() => _pressed = pressed);
   }

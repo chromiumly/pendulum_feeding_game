@@ -1,16 +1,27 @@
+/// Where the ranking keeps its data on the device.
+library;
+
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ranking_models.dart';
 
-/// What the ranking keeps on the device: finished games not yet recorded (so that none is lost when the network is down), and how
-/// many games of a player were recorded when last heard (to know it
-/// offline).
+/// What the ranking keeps on the device: finished games not yet recorded
+/// (so that none is lost when the network is down), and how many games of a
+/// player were recorded when last heard (to know it offline).
 abstract interface class RankingStorage {
+  /// Returns the games not yet recorded, oldest first; empty if none.
   Future<List<PlayRecord>> loadPending();
+
+  /// Replaces the games not yet recorded with [records], oldest first.
   Future<void> savePending(List<PlayRecord> records);
+
+  /// Returns the recorded games of [playerId] when last heard, or null if
+  /// never heard on this device.
   Future<int?> loadRecordedGames(String playerId);
+
+  /// Remembers that [count] games of [playerId] were recorded.
   Future<void> saveRecordedGames(String playerId, int count);
 }
 

@@ -1,4 +1,13 @@
-/// Classic 4th-order Runge-Kutta step for an autonomous system y' = f(y).
+/// The Runge-Kutta integrator used for the double pendulum.
+library;
+
+/// Advances [state] by one classic 4th-order Runge-Kutta step of the
+/// autonomous system y' = f(y), and returns the new state.
+///
+/// [state] holds the system's variables; it is not modified.
+/// [dt] is the step length, in the time unit of [derivatives] (seconds in
+/// this game).
+/// [derivatives] returns dy/dt for a state, as a list of the same length.
 ///
 /// The arithmetic order matches the TypeScript prototype (`RK4.ts`) so that
 /// results are reproducible bit for bit on the same floating-point platform.
@@ -17,7 +26,7 @@ List<double> rk4Step(
   ];
 }
 
-/// state + scale * deriv
+/// Returns [state] + [scale] x [deriv], element by element.
 List<double> _addScaled(List<double> state, List<double> deriv, double scale) {
   return [for (var i = 0; i < state.length; i++) state[i] + deriv[i] * scale];
 }

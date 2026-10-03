@@ -1,3 +1,6 @@
+/// Where the game's images, icons and fonts are.
+library;
+
 /// Asset paths. Images and icons are exported from the Figma design; images
 /// are made by tool/images.dart from the originals in art/.
 abstract final class GameAssets {
@@ -25,7 +28,8 @@ abstract final class GameAssets {
   /// The hand that shows how to drag in the how-to-play demo.
   static const dragHand = 'assets/images/effects/drag_hand.png';
 
-  /// Made by tool/images.dart from the art in art/food/.
+  /// Returns the image path of the food [id] (see `FoodType.id`). Made by
+  /// tool/images.dart from the art in art/food/.
   static String food(String id) => 'assets/images/food/$id.png';
 
   /// Food images are this many pixels per stage px; drawn at 1 / this, every

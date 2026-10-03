@@ -1,3 +1,6 @@
+/// The game's tunable rules, physics and layout, and the list of foods.
+library;
+
 import 'dart:math' as math;
 
 import '../../math/vec2.dart';
@@ -60,12 +63,15 @@ class GameConfig {
     this.setupBrideGrabRadius = 48,
   });
 
+  /// The world, origin at the top left, y downward [px]. The camera fits it
+  /// to the screen.
   final Vec2 worldSize;
 
   /// Simulation step [s]. The game always advances in steps of this size.
   final double fixedDt;
 
-  /// Null for no time limit (the how-to-play demo): play never ends.
+  /// Length of play [s]. Null for no time limit (the how-to-play demo): play
+  /// never ends.
   final int? timeLimitSeconds;
 
   final PendulumParams pendulumParams;
@@ -74,7 +80,11 @@ class GameConfig {
   /// swing needs a smaller step to stay accurate: with 2, the energy drifts
   /// about 0.1% over a game instead of about 2%.
   final int physicsSubsteps;
+
+  /// Where the setup screen starts the pendulum, at rest.
   final PendulumState pendulumInitialState;
+
+  /// The fixed pivot on the tree branch, in world coordinates [px].
   final Vec2 pendulumOrigin;
 
   /// Offset from the lower pendulum node to the centre of the bride's hit
@@ -86,17 +96,20 @@ class GameConfig {
   /// the air in front of it.
   final Vec2 brideMouthOffset;
 
-  /// Hit radius around the bride's mouth [px].
+  /// Radius of the bride's hit circle around [brideMouthOffset] [px].
   final double brideMouthRadius;
 
   /// Centre between the groom's shoes, on the ground [px].
   final Vec2 groomPosition;
 
+  /// Where each new food waits in the groom's raised hand [px].
   final Vec2 foodSpawnPosition;
 
-  /// [px/s²]
+  /// Gravity on a flying food, y downward [px/s²].
   final Vec2 foodGravity;
 
+  /// The foods that can be drawn, in the order of the bride's favourites,
+  /// best first; the draw relies on this order.
   final List<FoodType> foodTypes;
 
   /// Hit radius of every food [px]. A little larger than the food images,
@@ -115,10 +128,10 @@ class GameConfig {
   /// Launch velocity per pixel of drag [1/s].
   final double launchScale;
 
-  /// [px/s]
+  /// Fastest throw, however far the drag [px/s].
   final double maxLaunchSpeed;
 
-  /// Shorter drags are treated as cancelled rather than as a throw.
+  /// Shorter drags are treated as cancelled rather than as a throw [px].
   final double minDragDistance;
 
   /// Length of the 3, 2, 1 countdown [s].
@@ -150,11 +163,14 @@ class GameConfig {
   /// Grab distance from the bride's node-to-mouth segment [px].
   final double setupBrideGrabRadius;
 
+  /// [timeLimitSeconds] in fixed steps; null without a time limit.
   int? get timeLimitSteps =>
       timeLimitSeconds == null ? null : (timeLimitSeconds! / fixedDt).round();
 
+  /// [countdownSeconds] in fixed steps.
   int get countdownSteps => (countdownSeconds / fixedDt).round();
 
+  /// [startCueSeconds] in fixed steps.
   int get startCueSteps => (startCueSeconds / fixedDt).round();
 }
 

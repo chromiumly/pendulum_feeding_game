@@ -1,3 +1,6 @@
+/// The setup screen's Flutter layers: the スタート button and the hint.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../ui/assets.dart';
@@ -12,6 +15,7 @@ import '../ui/widgets/tile_button.dart';
 class SetupOverlay extends StatelessWidget {
   const SetupOverlay({super.key, required this.onStart});
 
+  /// Called when スタート is pressed, to start the countdown.
   final VoidCallback onStart;
 
   @override

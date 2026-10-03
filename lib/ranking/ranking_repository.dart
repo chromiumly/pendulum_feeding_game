@@ -1,3 +1,6 @@
+/// The interface to the ranking storage, so that it can be swapped in tests.
+library;
+
 import 'ranking_models.dart';
 
 /// Where finished games are recorded and ranked.
@@ -18,6 +21,7 @@ abstract interface class RankingRepository {
 class RecordRejectedException implements Exception {
   const RecordRejectedException([this.cause]);
 
+  /// The underlying error, if any.
   final Object? cause;
 
   @override

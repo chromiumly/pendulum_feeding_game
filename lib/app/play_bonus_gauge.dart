@@ -1,3 +1,6 @@
+/// The play-count bonus gauge on the setup screen.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../ui/text_styles.dart';
@@ -16,15 +19,18 @@ class PlayBonusGauge extends StatelessWidget {
     required this.maxUplift,
   });
 
-  /// 0.123 for +12.3%.
+  /// How much more an average food is worth this game: 0.123 for +12.3%.
   final double uplift;
+
+  /// The most [uplift] can ever be, which fills the gauge.
   final double maxUplift;
 
-  /// The gauge fill for [uplift] out of [maxUplift].
+  /// Returns the gauge fill, 0 (empty) to 1 (full), for [uplift] out of
+  /// [maxUplift]; 0 when [maxUplift] is not positive.
   static double fraction(double uplift, double maxUplift) =>
       maxUplift > 0 ? (uplift / maxUplift).clamp(0.0, 1.0) : 0.0;
 
-  /// "12.3%" for 0.123.
+  /// Returns [uplift] as a percentage label: "12.3%" for 0.123.
   static String percent(double uplift) =>
       '${(uplift * 100).toStringAsFixed(1)}%';
 

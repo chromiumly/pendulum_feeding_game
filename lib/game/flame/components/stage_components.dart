@@ -1,3 +1,11 @@
+/// The stage's characters and props: the pendulum, bride, groom, food and
+/// hit circles.
+///
+/// These components only draw the current `GameSession` state; they hold no
+/// gameplay state of their own. World coordinates equal the 844x390 stage
+/// (Figma) coordinates. Sizes and anchors come from the Figma layout.
+library;
+
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -10,8 +18,10 @@ import '../../../ui/palette.dart';
 import '../../model/game_session.dart';
 import '../stage_style.dart';
 
+/// Converts a world position to a canvas offset (the same coordinates).
 Offset _offset(Vec2 v) => Offset(v.x, v.y);
 
+/// Returns a stroke paint of [color], [width] px wide.
 Paint _stroke(Color color, double width) => Paint()
   ..color = color
   ..style = PaintingStyle.stroke
@@ -20,10 +30,6 @@ Paint _stroke(Color color, double width) => Paint()
 /// For drawing images. The images are larger than drawn, and without
 /// filtering, downscaling makes their fine texture look rough.
 Paint _imagePaint() => Paint()..filterQuality = FilterQuality.medium;
-
-/// The following components only draw the current [GameSession] state; they
-/// hold no gameplay state of their own. World coordinates equal the 844x390
-/// stage (Figma) coordinates. Sizes and anchors come from the Figma layout.
 
 /// Rods and the two pivots: the fixed one and the middle joint, which the
 /// player drags on the setup screen. The lower node is the bride's swing
@@ -83,9 +89,11 @@ class PendulumComponent extends Component with HasGameReference<FlameGame> {
     ..strokeWidth = 1
     ..strokeCap = StrokeCap.round;
 
+  /// Returns [paint] with round line ends.
   static Paint _round(Paint paint) => paint..strokeCap = StrokeCap.round;
 
-  /// The rope from [a] to [b]; [toSeat] when [b] is the swing seat.
+  /// Draws the rope from [a] to [b] (world coordinates [px]); [toSeat] is
+  /// true when [b] is the swing seat, where the rope must not lie on top.
   void _drawRope(Canvas canvas, Offset a, Offset b, {bool toSeat = false}) {
     final along = b - a;
     final length = along.distance;
@@ -193,9 +201,10 @@ class BrideComponent extends SpriteComponent with HasGameReference<FlameGame> {
 
   final GameSession session;
 
+  /// The bride's drawn size [px].
   static final spriteSize = Vector2(84, 128);
 
-  /// Where the rope meets the swing seat in the sprite.
+  /// Where the rope meets the swing seat in the sprite [px].
   static const seat = Offset(30.5, 84);
   static final seatAnchor = Anchor(seat.dx / 84, seat.dy / 128);
 
@@ -211,6 +220,7 @@ class BrideComponent extends SpriteComponent with HasGameReference<FlameGame> {
     _glow.update(dt, active: session.phase == GamePhase.setup);
   }
 
+  /// Moves and turns her with the pendulum's lower node.
   void _follow() {
     final node = session.pendulumPositions.lower;
     position.setValues(node.x, node.y);
@@ -259,13 +269,14 @@ class _SetupGlow {
     ..imageFilter = ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
   final _opacityPaint = Paint();
 
-  /// Advances the pulse while [active], and restarts it (bright) otherwise.
+  /// Advances the pulse by [dt] seconds while [active], and restarts it
+  /// (bright) otherwise.
   void update(double dt, {required bool active}) {
     _time = active ? _time + dt : 0;
   }
 
   /// Draws the glow for [sprite] as if it were rendered at [position] with
-  /// [size] and [anchor].
+  /// [size] and [anchor], in the canvas's coordinates [px].
   void render(
     Canvas canvas,
     Sprite sprite, {
@@ -299,7 +310,14 @@ class _SetupGlow {
   }
 }
 
-enum GroomPose { hold, throwing }
+/// The groom's animations.
+enum GroomPose {
+  /// Standing, holding the next food up.
+  hold,
+
+  /// The throwing motion, played once per throw.
+  throwing,
+}
 
 /// The groom stands with his feet at [GameConfig.groomPosition], holding the
 /// food. [playThrow] plays the throwing motion once, then he holds again.
@@ -370,6 +388,7 @@ class GroomComponent extends SpriteAnimationGroupComponent<GroomPose>
     super.update(dt);
   }
 
+  /// Hides him on the setup screen.
   void _updateVisibility() {
     isVisible = session.phase != GamePhase.setup;
   }
@@ -383,6 +402,7 @@ class FoodComponent extends Component with HasGameReference<FlameGame> {
 
   final GameSession session;
 
+  /// Each food type's image, by [FoodType.id].
   final _sprites = <String, Sprite>{};
 
   final _paint = _imagePaint();
@@ -414,7 +434,9 @@ class FoodComponent extends Component with HasGameReference<FlameGame> {
   }
 }
 
-/// Debug overlay of the circles the collision rule uses.
+/// The circles the collision rule uses: the bride's hit circle and, once the
+/// food is shown, the food's. A debug overlay in the game, shown on purpose
+/// in the how-to-play demo.
 class HitCirclesComponent extends Component {
   HitCirclesComponent(this.session);
 

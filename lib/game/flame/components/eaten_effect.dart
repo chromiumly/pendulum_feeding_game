@@ -1,3 +1,6 @@
+/// The score effect played when the bride eats a food.
+library;
+
 import 'dart:math' as math;
 
 import 'package:flame/components.dart';
@@ -21,6 +24,9 @@ import '../../model/rules.dart';
 /// Placed relative to the mouth at the moment of eating, as in the Figma
 /// layout with the bride hanging straight down; it does not follow her.
 class EatenEffect extends Component with HasGameReference<FlameGame> {
+  /// [position] is the bride's hit circle centre when she ate (world
+  /// coordinates [px]); [points] the points gained, combo bonus included;
+  /// [combo] the foods eaten in a row, this one included (1 or more).
   EatenEffect({
     required Vector2 position,
     required this.points,
@@ -31,8 +37,10 @@ class EatenEffect extends Component with HasGameReference<FlameGame> {
   final int points;
   final int combo;
 
+  /// How long the effect shows [s].
   static const duration = 1.0;
 
+  /// Foods in a row that one big heart stands for.
   static const heartsPerBigHeart = 5;
 
   /// Figma's heart, and the big one standing for [heartsPerBigHeart].
@@ -45,6 +53,7 @@ class EatenEffect extends Component with HasGameReference<FlameGame> {
 
   /// Hearts lie on an arc around the mouth, from its left round below it to
   /// its lower right, big ones first. Two land about where Figma has them.
+  /// Angles of the arc's ends, clockwise from +x [rad].
   static const _arcFrom = 200 * math.pi / 180;
   static const _arcTo = 20 * math.pi / 180;
 
@@ -72,6 +81,8 @@ class EatenEffect extends Component with HasGameReference<FlameGame> {
     ];
   }
 
+  /// Returns the point at [t] (0 to 1) along the hearts' arc of [radius]
+  /// [px], relative to the mouth.
   static Vector2 _arcPoint(double t, double radius) {
     final angle = _arcFrom + (_arcTo - _arcFrom) * t;
     return Vector2(math.cos(angle), math.sin(angle)) * radius;
@@ -148,6 +159,7 @@ class EatenEffect extends Component with HasGameReference<FlameGame> {
     );
   }
 
+  /// Returns a text paint of [style] at [opacity] (0 to 1).
   static TextPaint _label(TextStyle style, double opacity) => TextPaint(
     style: style.copyWith(color: style.color!.withValues(alpha: opacity)),
   );

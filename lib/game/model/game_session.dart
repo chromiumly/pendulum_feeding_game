@@ -1,3 +1,6 @@
+/// One play-through of the game: its phases, input, simulation and score.
+library;
+
 import 'dart:math' as math;
 
 import '../../math/vec2.dart';
@@ -8,6 +11,8 @@ import 'game_event.dart';
 import 'rules.dart';
 import 'setup_rules.dart';
 
+/// Where a game session is in its life, in order:
+///
 /// setup: the player places the pendulum; nothing moves.
 /// countdown: 3, 2, 1 and "START"; nothing moves and the clock is stopped.
 /// playing: physics, food and the time limit run. After the time limit,
@@ -20,7 +25,10 @@ enum GamePhase { setup, countdown, playing, finished }
 class Aim {
   const Aim({required this.start, required this.current});
 
+  /// Where the drag began [px].
   final Vec2 start;
+
+  /// Where the pointer is now [px]; the throw goes the opposite way.
   final Vec2 current;
 }
 
@@ -33,6 +41,8 @@ class _Placement {
   });
 
   final SetupHandle handle;
+
+  /// The point the grabbed rod turns around [px].
   final Vec2 pivot;
 
   /// Pointer angle around [pivot] at the previous drag position.
@@ -102,6 +112,7 @@ class GameSession {
   GamePhase _phase = GamePhase.setup;
   final List<GameEvent> _events = [];
 
+  /// The pendulum now; angles as in [PendulumState].
   PendulumState get pendulumState => _pendulumState;
 
   /// The pendulum as placed on the setup screen, at rest (without the start
@@ -115,9 +126,17 @@ class GameSession {
         upperOmega: 0,
         lowerOmega: 0,
       );
+
+  /// The pendulum's joint and lower node now, in world coordinates [px].
   PendulumPositions get pendulumPositions => _pendulumPositions;
+
+  /// The food in play: waiting in the groom's hand or flying.
   Food get food => _food;
+
+  /// The drag in progress while aiming, or null.
   Aim? get aim => _aim;
+
+  /// Points so far, combo bonuses included.
   int get score => _score;
 
   /// Foods eaten in a row; a food that leaves the world breaks the run.
@@ -143,7 +162,8 @@ class GameSession {
     return (remaining + stepsPerSecond - 1) ~/ stepsPerSecond;
   }
 
-  /// Infinite without a time limit.
+  /// Time left to throw [s]: 0 once time is up, infinite without a time
+  /// limit.
   double get remainingSeconds {
     final steps = config.timeLimitSteps;
     return steps == null
@@ -151,13 +171,15 @@ class GameSession {
         : (steps - _elapsedSteps) * config.fixedDt;
   }
 
+  /// Centre of the bride's hit circle now, in world coordinates [px].
   Vec2 get mouthPosition => brideMouthPosition(
     lowerNode: _pendulumPositions.lower,
     lowerTheta: _pendulumState.lowerTheta,
     mouthOffset: config.brideMouthOffset,
   );
 
-  /// Launch velocity the current aim would produce, or null when not aiming.
+  /// Launch velocity the current aim would produce [px/s], or null when not
+  /// aiming.
   Vec2? get aimVelocity {
     final aim = _aim;
     if (aim == null) return null;
@@ -185,7 +207,8 @@ class GameSession {
 
   // ---- Setup ---------------------------------------------------------------
 
-  /// Grabs the joint or the bride under [point], if any.
+  /// Grabs the joint or the bride under [point] (world coordinates [px]), if
+  /// any. Only on the setup screen, one handle at a time.
   void beginPlacement(Vec2 point) {
     if (_phase != GamePhase.setup || _placement != null) return;
     final positions = _pendulumPositions;
@@ -212,6 +235,8 @@ class GameSession {
   /// Rotates the grabbed rod by the pointer's angular movement around its
   /// pivot, all the way round if the player likes. The angle is normalized
   /// into [0, 2pi) (0 to 360 degrees). Both angular velocities stay zero.
+  ///
+  /// [point] is the pointer's position in world coordinates [px].
   void updatePlacement(Vec2 point) {
     final placement = _placement;
     if (placement == null) return;
@@ -243,6 +268,7 @@ class GameSession {
     );
   }
 
+  /// Lets go of the grabbed handle, if any.
   void endPlacement() {
     _placement = null;
   }
@@ -274,6 +300,8 @@ class GameSession {
 
   // ---- Input ---------------------------------------------------------------
 
+  /// Starts aiming from [point] (world coordinates [px]). Ignored unless
+  /// playing, before time is up, with the food in the groom's hand.
   void beginAim(Vec2 point) {
     if (_phase != GamePhase.playing ||
         isTimeUp ||
@@ -284,13 +312,15 @@ class GameSession {
     _aim = Aim(start: point, current: point);
   }
 
+  /// Moves the aim's pointer to [point] (world coordinates [px]).
   void updateAim(Vec2 point) {
     final aim = _aim;
     if (aim == null) return;
     _aim = Aim(start: aim.start, current: point);
   }
 
-  /// Throws the food with the current aim, or cancels a too-short drag.
+  /// Throws the food with the current aim and reports [FoodLaunched], or
+  /// cancels a too-short drag.
   void releaseAim() {
     final velocity = aimVelocity;
     final armed = isAimArmed;
@@ -302,12 +332,16 @@ class GameSession {
     _events.add(const FoodLaunched());
   }
 
+  /// Drops the aim without throwing, e.g. when the system takes the pointer.
   void cancelAim() {
     _aim = null;
   }
 
   // ---- Simulation ----------------------------------------------------------
 
+  /// Advances the game by one fixed step of [GameConfig.fixedDt]: the
+  /// countdown, or the pendulum, the flying food, eating, missing and the
+  /// clock. Does nothing on the setup screen or once finished.
   void step() {
     switch (_phase) {
       case GamePhase.setup || GamePhase.finished:
@@ -349,6 +383,8 @@ class GameSession {
     }
   }
 
+  /// Moves the flying food by [dt] seconds, then lets the bride eat it or
+  /// lets it go once it leaves the world.
   void _stepFood(double dt) {
     final previous = _food.position;
     final next = stepProjectile(
@@ -398,6 +434,8 @@ class GameSession {
     _pendulumPositions = _pendulum.positions(state, config.pendulumOrigin);
   }
 
+  /// Returns a new food in the groom's hand, drawn with
+  /// [foodTypeProbabilities].
   Food _spawnFood() {
     final types = config.foodTypes;
     return Food(

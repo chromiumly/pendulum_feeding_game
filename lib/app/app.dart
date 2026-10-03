@@ -1,3 +1,6 @@
+/// The root widget of the app.
+library;
+
 import 'package:flutter/material.dart';
 
 import '../ranking/ranking_service.dart';
@@ -5,6 +8,7 @@ import '../ui/text_styles.dart';
 import 'landscape_guard.dart';
 import 'title_screen.dart';
 
+/// The app: theme, landscape guard and the title screen as home.
 class PendulumFeedingApp extends StatelessWidget {
   const PendulumFeedingApp({super.key, this.ranking});
 

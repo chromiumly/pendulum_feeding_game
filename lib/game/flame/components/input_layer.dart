@@ -1,3 +1,6 @@
+/// Pointer input for the game: setup drags and throws.
+library;
+
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
@@ -17,6 +20,7 @@ class InputLayer extends PositionComponent with DragCallbacks {
 
   final GameSession session;
 
+  /// Grabs a handle on the setup screen, or starts aiming while playing.
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
@@ -41,6 +45,7 @@ class InputLayer extends PositionComponent with DragCallbacks {
       ..updateAim(point);
   }
 
+  /// Lets go of the handle, or throws (or cancels a too-short aim).
   @override
   void onDragEnd(DragEndEvent event) {
     super.onDragEnd(event);
@@ -49,6 +54,7 @@ class InputLayer extends PositionComponent with DragCallbacks {
       ..releaseAim();
   }
 
+  /// Lets go of the handle, or drops the aim without throwing.
   @override
   void onDragCancel(DragCancelEvent event) {
     super.onDragCancel(event);
@@ -57,5 +63,6 @@ class InputLayer extends PositionComponent with DragCallbacks {
       ..cancelAim();
   }
 
+  /// Converts Flame's vector, already in world coordinates, to [Vec2].
   static Vec2 _vec(Vector2 v) => Vec2(v.x, v.y);
 }

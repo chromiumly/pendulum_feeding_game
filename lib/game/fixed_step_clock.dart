@@ -1,3 +1,6 @@
+/// Turns real frame times into fixed simulation steps.
+library;
+
 /// Converts variable frame times into a whole number of fixed steps.
 ///
 /// Leftover time is carried to the next frame. After a long stall (tab switch,
@@ -6,7 +9,10 @@
 class FixedStepClock {
   FixedStepClock({required this.stepDt, this.maxStepsPerFrame = 5});
 
+  /// Length of one fixed step [s].
   final double stepDt;
+
+  /// Most steps run for one frame; time beyond them is dropped.
   final int maxStepsPerFrame;
 
   double _accumulator = 0;

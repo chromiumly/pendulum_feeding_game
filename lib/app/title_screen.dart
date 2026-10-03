@@ -1,3 +1,6 @@
+/// The title screen and its how-to-play popup.
+library;
+
 import 'package:flutter/material.dart';
 
 import '../ranking/ranking_service.dart';
@@ -9,9 +12,11 @@ import '../ui/widgets/stage.dart';
 import 'game_screen.dart';
 import 'how_to_play_popup.dart';
 
+/// The title screen: tap to start, or "?" for how to play.
 class TitleScreen extends StatefulWidget {
   const TitleScreen({super.key, this.ranking});
 
+  /// Passed on to the game; null plays as a guest.
   final RankingService? ranking;
 
   @override
@@ -20,6 +25,7 @@ class TitleScreen extends StatefulWidget {
 
 class _TitleScreenState extends State<TitleScreen>
     with SingleTickerProviderStateMixin {
+  /// Whether the how-to-play popup is shown instead of the title.
   bool _showHowToPlay = false;
 
   /// "TAP TO START" fades between 50% and 100% opacity, never fully out.
@@ -39,6 +45,7 @@ class _TitleScreenState extends State<TitleScreen>
     super.dispose();
   }
 
+  /// Leaves for the game screen.
   void _start() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(

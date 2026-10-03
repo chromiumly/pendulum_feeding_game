@@ -1,3 +1,6 @@
+/// The round icon buttons: "?" and "×".
+library;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -17,11 +20,15 @@ class RoundIconButton extends StatelessWidget {
 
   static const circleDiameter = 50.0;
 
+  /// SVG asset path.
   final String icon;
+
+  /// What screen readers announce.
   final String semanticLabel;
+
   final VoidCallback onPressed;
 
-  /// Top-left of the 50x50 circle inside the SVG.
+  /// Top-left of the 50x50 circle inside the SVG [px].
   final Offset circleOffset;
 
   /// Figma drop shadow (0, 2, blur 2, 25%). flutter_svg ignores SVG filters,

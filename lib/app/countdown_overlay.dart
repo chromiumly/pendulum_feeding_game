@@ -1,3 +1,6 @@
+/// The countdown shown before play begins.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../ui/text_styles.dart';

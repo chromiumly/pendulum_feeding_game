@@ -1,3 +1,6 @@
+/// The result popup shown when a game ends.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../ranking/ranking_models.dart';
@@ -29,13 +32,25 @@ class ResultPopup extends StatelessWidget {
   /// Shown in place of an unknown score.
   static const unknownScore = '-----';
 
+  /// Shown in place of the ranks while the game is being recorded.
   static const recordingNote = '集計中…';
+
+  /// Shown in place of the ranks when recording failed.
   static const failedNote = '通信失敗のため\n次回更新します';
+
+  /// Shown in place of the rank for a guest, whose games are not recorded.
   static const guestNote = 'ゲストのため\n記録されません';
 
+  /// This game's score.
   final int score;
+
+  /// What the ranking says about this game, which may still change.
   final RankingStatus ranking;
+
+  /// Called for もう一度: play again from the setup screen.
   final VoidCallback onRetry;
+
+  /// Called for タイトルへ: back to the title screen.
   final VoidCallback onTitle;
 
   @override
@@ -103,6 +118,8 @@ class ResultPopup extends StatelessWidget {
     );
   }
 
+  /// Returns one column of the popup at [left] [px]: [heading], the score
+  /// [value], and the [rank] line at most [rankWidth] [px] wide.
   static List<Widget> _column({
     required double left,
     required String heading,
@@ -188,6 +205,7 @@ class NewRecordBubble extends StatelessWidget {
   }
 }
 
+/// Paints the bubble's tail, a triangle pointing down.
 class _TailPainter extends CustomPainter {
   const _TailPainter();
 

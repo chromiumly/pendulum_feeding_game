@@ -1,3 +1,6 @@
+/// Text with a light outline, as on most of the game's display text.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../palette.dart';

@@ -1,3 +1,6 @@
+/// The ranking storage on Cloud Firestore.
+library;
+
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,6 +24,7 @@ class FirestoreRankingRepository implements RankingRepository {
   static String bestKey(String playerId) =>
       sha256.convert(utf8.encode(playerId)).toString();
 
+  /// Returns the `gamesPlayed` of a players/ document; 0 before any game.
   static int _gamesPlayed(DocumentSnapshot<Map<String, dynamic>> player) =>
       (player.data()?['gamesPlayed'] as num?)?.toInt() ?? 0;
 
@@ -121,6 +125,7 @@ class FirestoreRankingRepository implements RankingRepository {
     );
   }
 
+  /// Returns how many documents [query] matches, counted on the server.
   static Future<int> _count(Query<Map<String, dynamic>> query) async =>
       (await query.count().get()).count ?? 0;
 }

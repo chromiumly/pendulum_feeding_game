@@ -1,3 +1,6 @@
+/// The Flame game that hosts a session and draws the stage.
+library;
+
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -21,8 +24,11 @@ import 'stage_style.dart';
 /// its state, turn session events into effects, and publish the phase for the
 /// Flutter overlays.
 class PendulumFeedingGame extends FlameGame {
-  /// [showHitCircles] forces the debug hit circles on regardless of the
-  /// compile-time flag, e.g. for the how-to-play demo.
+  /// [session] is the game to host; its config sets the world size.
+  /// [onGameFinished] is called with the final score once it ends.
+  /// [showHitCircles] forces the debug hit circles on (true) or off (false)
+  /// regardless of the compile-time flag; null follows the flag. The
+  /// how-to-play demo turns them on.
   PendulumFeedingGame({
     required this.session,
     this.onGameFinished,
@@ -76,6 +82,7 @@ class PendulumFeedingGame extends FlameGame {
   @override
   Color backgroundColor() => const Color(0x00000000);
 
+  /// Adds the stage's components, drawn in this order (back to front).
   @override
   Future<void> onLoad() async {
     // World coordinates == 844x390 logical coordinates, origin at top left.
@@ -96,6 +103,8 @@ class PendulumFeedingGame extends FlameGame {
     ]);
   }
 
+  /// Runs as many fixed session steps as [dt] (the frame time [s]) calls
+  /// for, turns their events into effects, and publishes the phase.
   @override
   void update(double dt) {
     _effectTimeLeft = math.max(0, _effectTimeLeft - dt);
@@ -109,12 +118,15 @@ class PendulumFeedingGame extends FlameGame {
     super.update(dt);
   }
 
+  /// Copies the session's phase and countdown to the overlays' notifiers.
   void _publish() {
     final holdResult = session.isFinished && _resultDelay > 0;
     phase.value = holdResult ? GamePhase.playing : session.phase;
     countdownNumber.value = session.countdownNumber;
   }
 
+  /// Plays the effect for [event]: score hearts, the groom's throw, or the
+  /// end of the game.
   void _handleEvent(GameEvent event) {
     switch (event) {
       case FoodEaten(:final mouthPosition, :final points, :final combo):

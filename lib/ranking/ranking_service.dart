@@ -1,3 +1,6 @@
+/// The ranking as the game sees it: recording games and the play count.
+library;
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -13,6 +16,10 @@ import 'ranking_storage.dart';
 /// Every game of a player is kept on the device until it has been recorded,
 /// and sent again later if recording fails.
 class RankingService {
+  /// [repository] records and ranks games; [storage] keeps them on the
+  /// device until then. [launchUri] is the URL the app was opened with,
+  /// whose `id` names the player. [random] makes play IDs (secure by
+  /// default).
   RankingService({
     required this._repository,
     required this._storage,
@@ -58,6 +65,7 @@ class RankingService {
   /// bookmarks keep it.
   Future<void> start() => _started;
 
+  /// Does the work of [start], once.
   Future<void> _start() async {
     final id = playerIdFromUri(_launchUri);
     if (id == null) return;
@@ -135,6 +143,7 @@ class RankingService {
     }
   }
 
+  /// Drops the kept game [playId], once recorded or refused for good.
   Future<void> _removePending(String playId) async {
     final pending = await _storage.loadPending();
     await _savePending([
@@ -143,17 +152,19 @@ class RankingService {
     ]);
   }
 
+  /// Keeps [pending] on the device and counts this player's among them.
   Future<void> _savePending(List<PlayRecord> pending) async {
     await _storage.savePending(pending);
     _countPending(pending);
   }
 
+  /// Counts this player's games among [pending].
   void _countPending(List<PlayRecord> pending) {
     _pendingGames = pending.where((r) => r.playerId == _playerId).length;
   }
 
-  /// [count] comes from the storage, which is always right; it is
-  /// remembered for offline launches.
+  /// Sets the player's recorded games to [count]. It comes from the storage,
+  /// which is always right; it is remembered for offline launches.
   Future<void> _setRecordedGames(int count) async {
     final playerId = _playerId;
     if (playerId == null) return;
@@ -179,6 +190,8 @@ class RankingService {
     }
   }
 
+  /// Runs [operation] after every earlier one has finished, and returns its
+  /// result.
   Future<T> _serialized<T>(Future<T> Function() operation) {
     final result = _queue.then((_) => operation());
     _queue = result.then((_) {}, onError: (_) {});
@@ -188,6 +201,7 @@ class RankingService {
   static const _playIdChars =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
+  /// Returns a new random play ID of 20 letters and digits.
   String _newPlayId() => String.fromCharCodes([
     for (var i = 0; i < 20; i++)
       _playIdChars.codeUnitAt(_random.nextInt(_playIdChars.length)),

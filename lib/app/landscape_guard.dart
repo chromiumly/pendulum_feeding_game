@@ -1,3 +1,6 @@
+/// The prompt to rotate the device to landscape.
+library;
+
 import 'package:flutter/material.dart';
 
 /// The game is landscape-only. In portrait, ask the player to rotate the
@@ -5,6 +8,7 @@ import 'package:flutter/material.dart';
 class LandscapeGuard extends StatelessWidget {
   const LandscapeGuard({super.key, required this.child});
 
+  /// The app, shown underneath in any orientation.
   final Widget child;
 
   @override

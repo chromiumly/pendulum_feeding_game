@@ -1,3 +1,6 @@
+/// The game's text styles.
+library;
+
 import 'package:flutter/painting.dart';
 
 import 'palette.dart';
@@ -8,6 +11,7 @@ import 'palette.dart';
 /// text uses a drop shadow. Japanese glyphs in Inter styles fall back to
 /// M PLUS Rounded 1c, since Inter has no Japanese glyphs.
 abstract final class GameTextStyles {
+  /// Font family names, as declared in pubspec.yaml.
   static const rounded = 'MPLUSRounded1c';
   static const inter = 'Inter';
 

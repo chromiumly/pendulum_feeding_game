@@ -1,29 +1,31 @@
-// Player IDs for the ranking: generates them with their QR codes, and
-// registers them in Firestore (players/{id}).
-//
-//   dart run tool/ranking/player_ids.dart generate [--count 50]
-//       Writes tool/ranking/out/players.csv (number, ID, URL) and
-//       tool/ranking/out/qr.html (printable QR codes). Refuses to overwrite
-//       an existing players.csv, whose IDs may already be handed out.
-//
-//   dart run tool/ranking/player_ids.dart register [--emulator]
-//       Registers every ID in players.csv, using the service account key in
-//       .firebase/. Registering an ID again is harmless: it keeps the
-//       player's game count. With --emulator it writes to a local
-//       Firestore emulator (localhost:8080) instead.
-//
-//   dart run tool/ranking/player_ids.dart reset [--emulator]
-//       Shows how many documents each ranking collection has. Deletes
-//       nothing.
-//
-//   dart run tool/ranking/player_ids.dart reset --confirm <project ID>
-//       Deletes every play, score, best and player, e.g. after rehearsals,
-//       then registers the IDs in players.csv again (with no games). The
-//       IDs, and so the QR codes, stay the same.
-//
-// tool/ranking/out/ and .firebase/ are git-ignored: IDs are secrets (anyone
-// with an ID can record games as that player) and so is the key. Which ID
-// is whose is kept by the host outside this project.
+/// Player IDs for the ranking: generates them with their QR codes, and
+/// registers them in Firestore (players/{id}).
+///
+///   dart run tool/ranking/player_ids.dart generate [--count 50]
+///       Writes tool/ranking/out/players.csv (number, ID, URL) and
+///       tool/ranking/out/qr.html (printable QR codes). Refuses to overwrite
+///       an existing players.csv, whose IDs may already be handed out.
+///
+///   dart run tool/ranking/player_ids.dart register [--emulator]
+///       Registers every ID in players.csv, using the service account key in
+///       .firebase/. Registering an ID again is harmless: it keeps the
+///       player's game count. With --emulator it writes to a local
+///       Firestore emulator (localhost:8080) instead.
+///
+///   dart run tool/ranking/player_ids.dart reset [--emulator]
+///       Shows how many documents each ranking collection has. Deletes
+///       nothing.
+///
+///   dart run tool/ranking/player_ids.dart reset --confirm `<project ID>`
+///       Deletes every play, score, best and player, e.g. after rehearsals,
+///       then registers the IDs in players.csv again (with no games). The
+///       IDs, and so the QR codes, stay the same.
+///
+/// tool/ranking/out/ and .firebase/ are git-ignored: IDs are secrets (anyone
+/// with an ID can record games as that player) and so is the key. Which ID
+/// is whose is kept by the host outside this project.
+library;
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -44,6 +46,8 @@ final _outDir = Directory('tool/ranking/out');
 final _csv = File('tool/ranking/out/players.csv');
 final _html = File('tool/ranking/out/qr.html');
 
+/// Runs the command named by the first of [args]: generate, register or
+/// reset, with its options. Run from the project root.
 Future<void> main(List<String> args) async {
   if (!File('pubspec.yaml').existsSync()) {
     _fail('Run from the project root.');
@@ -69,6 +73,8 @@ Future<void> main(List<String> args) async {
 
 // ---- generate --------------------------------------------------------------
 
+/// Writes [count] new random IDs to players.csv, with a printable page of
+/// their QR codes. Refuses if players.csv exists.
 void _generate({required int count}) {
   if (_csv.existsSync()) {
     _fail(
@@ -103,8 +109,10 @@ void _generate({required int count}) {
   );
 }
 
+/// Returns the game URL that plays as [id], encoded in its QR code.
 String _url(String id) => '$_gameUrl?id=$id';
 
+/// Returns a printable HTML page with a numbered QR code card per player.
 String _qrPage(List<({int number, String id, String url})> players) {
   final cards = [
     for (final p in players)
@@ -139,7 +147,7 @@ $cards
 ''';
 }
 
-/// A QR code as SVG, with a 4-module quiet zone.
+/// Returns a QR code of [data] as SVG, with a 4-module quiet zone.
 String _qrSvg(String data) {
   final image = QrImage(
     QrCode(
@@ -161,6 +169,7 @@ String _qrSvg(String data) {
 
 // ---- register --------------------------------------------------------------
 
+/// Registers every ID in players.csv, in the emulator if [emulator].
 Future<void> _register({required bool emulator}) async {
   final ids = _readIds();
   final firestore = await _Firestore.connect(emulator: emulator);
@@ -172,6 +181,8 @@ Future<void> _register({required bool emulator}) async {
   stdout.writeln('Registered ${ids.length} IDs in ${firestore.label}.');
 }
 
+/// Returns the IDs in players.csv, in order. Exits with an error if the
+/// file is missing or an ID is malformed.
 List<String> _readIds() {
   if (!_csv.existsSync()) _fail('${_csv.path} not found; run generate first.');
   final ids = [
@@ -189,6 +200,9 @@ List<String> _readIds() {
 /// Everything the game writes, see firestore.rules.
 const _rankingCollections = ['plays', 'scores', 'bests', 'players'];
 
+/// Shows how many documents each ranking collection has. Only when
+/// [confirm] is the project ID, also deletes them all and registers the IDs
+/// again. In the emulator if [emulator].
 Future<void> _reset({required bool emulator, String? confirm}) async {
   final ids = _readIds();
   final firestore = await _Firestore.connect(emulator: emulator);
@@ -225,6 +239,8 @@ Future<void> _reset({required bool emulator, String? confirm}) async {
 class _Firestore {
   _Firestore._(this._client, this._base, this.projectId, this.label);
 
+  /// Connects to the emulator if [emulator], or to the real project with
+  /// the key in .firebase/; exits with an error without exactly one key.
   static Future<_Firestore> connect({required bool emulator}) async {
     if (emulator) {
       return _Firestore._(
@@ -265,6 +281,7 @@ class _Firestore {
 
   String get _database => 'projects/$projectId/databases/(default)';
 
+  /// Closes the connection.
   void close() => _client.close();
 
   /// Creates every player in [ids] that is missing. The empty mask leaves
@@ -280,7 +297,7 @@ class _Firestore {
       },
   ]);
 
-  /// The full names of all documents in [collection].
+  /// Returns the full names of all documents in [collection], page by page.
   Future<List<String>> documentNames(String collection) async {
     final names = <String>[];
     String? pageToken;
@@ -304,6 +321,7 @@ class _Firestore {
     return names;
   }
 
+  /// Deletes the documents with these full [names].
   Future<void> delete(List<String> names) async {
     // A commit takes at most 500 writes.
     for (var i = 0; i < names.length; i += 500) {
@@ -313,6 +331,7 @@ class _Firestore {
     }
   }
 
+  /// Applies [writes] (Firestore REST write objects) in one commit.
   Future<void> _commit(List<Map<String, Object>> writes) async {
     if (writes.isEmpty) return;
     final response = await _client.post(
@@ -323,6 +342,7 @@ class _Firestore {
     _check(response);
   }
 
+  /// Exits with Firestore's message unless [response] succeeded.
   static void _check(http.Response response) {
     if (response.statusCode != 200) {
       _fail('Firestore said ${response.statusCode}: ${response.body}');
@@ -347,11 +367,13 @@ class _EmulatorClient extends http.BaseClient {
 
 // ---- helpers ---------------------------------------------------------------
 
+/// Returns the value after the option [name] in [args], or null if absent.
 String? _option(List<String> args, String name) {
   final i = args.indexOf(name);
   return i >= 0 && i + 1 < args.length ? args[i + 1] : null;
 }
 
+/// Prints [message] to stderr and exits with status 1.
 Never _fail(String message) {
   stderr.writeln(message);
   exit(1);

@@ -1,3 +1,6 @@
+/// The data the ranking records and reports.
+library;
+
 /// One finished game, as sent to the ranking storage.
 class PlayRecord {
   const PlayRecord({
@@ -6,6 +9,7 @@ class PlayRecord {
     required this.score,
   });
 
+  /// Reads a record written by [toJson].
   factory PlayRecord.fromJson(Map<String, Object?> json) => PlayRecord(
     playId: json['playId']! as String,
     playerId: json['playerId']! as String,
@@ -15,9 +19,13 @@ class PlayRecord {
   /// Random, generated on the device. Re-sending the same record is
   /// recognised by it, so a retry never records a game twice.
   final String playId;
+
+  /// The registered player who played it (the secret ID from the QR code).
   final String playerId;
+
   final int score;
 
+  /// Returns the record as JSON, for keeping it on the device.
   Map<String, Object?> toJson() => {
     'playId': playId,
     'playerId': playerId,
@@ -39,15 +47,25 @@ class RankingResult {
     required this.gamesPlayed,
   });
 
-  /// This game's score, and its rank among all recorded games.
+  /// This game's score.
   final int score;
+
+  /// This game's rank among all recorded games, from 1.
   final int playRank;
+
+  /// All recorded games, of every player.
   final int playCount;
 
-  /// The player's best score, and its rank among all players' bests.
+  /// The player's best score, this game included.
   final int best;
+
+  /// Whether this game set [best].
   final bool isNewBest;
+
+  /// [best]'s rank among all players' bests, from 1.
   final int bestRank;
+
+  /// Players with at least one recorded game.
   final int playerCount;
 
   /// The player's recorded games, this one included.
@@ -74,6 +92,7 @@ class RankingFailed extends RankingStatus {
   const RankingFailed();
 }
 
+/// The game was recorded; [result] has its ranks.
 class RankingRecorded extends RankingStatus {
   const RankingRecorded(this.result);
 

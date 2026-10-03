@@ -1,3 +1,6 @@
+/// The panel behind popups.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../palette.dart';
@@ -11,8 +14,11 @@ class PopupPanel extends StatelessWidget {
     required this.child,
   });
 
+  /// Size of the panel [px].
   final double width;
   final double height;
+
+  /// The contents, laid out inside the panel.
   final Widget child;
 
   @override

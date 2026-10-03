@@ -1,3 +1,6 @@
+/// The game's colours.
+library;
+
 import 'package:flutter/painting.dart';
 
 /// Colours from the Figma design.
@@ -14,7 +17,10 @@ abstract final class Palette {
   /// Outline around display text.
   static const textOutline = Color(0xFFF8F5E9);
 
+  /// Popup panels.
   static const popup = Color(0xFFC4B396);
+
+  /// Cream tile buttons.
   static const tile = Color(0xFFFFF8E8);
 
   /// Soft pale-gold glow on what can be dragged on the setup screen.

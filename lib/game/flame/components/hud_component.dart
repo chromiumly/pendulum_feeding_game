@@ -1,3 +1,6 @@
+/// The in-game score and time display.
+library;
+
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -15,6 +18,8 @@ class HudComponent extends Component {
 
   final _textPaint = TextPaint(style: GameTextStyles.hud);
 
+  /// Draws "SCORE 00000" and "TIME 20" (∞ without a time limit), once
+  /// play has started.
   @override
   void render(Canvas canvas) {
     if (session.phase case GamePhase.setup || GamePhase.countdown) return;

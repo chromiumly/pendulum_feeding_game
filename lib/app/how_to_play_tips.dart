@@ -1,3 +1,6 @@
+/// The tip cards on page 2 of the how-to-play popup.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../game/model/food.dart';
@@ -44,8 +47,14 @@ class _TipCard extends StatelessWidget {
   });
 
   final String heading;
+
+  /// Two lines at the bottom of the card.
   final String body;
+
+  /// Left edge of [body] in the card [px].
   final double bodyLeft;
+
+  /// Positioned widgets in card coordinates, between heading and body.
   final List<Widget> illustration;
 
   @override
@@ -237,21 +246,24 @@ class _PlayBonusCard extends StatelessWidget {
   }
 }
 
-/// Text with Figma's 2 px light outline, like all text on this page.
+/// Returns [text] with Figma's 2 px light outline, like all text on this
+/// page, aligned by [align].
 Widget _text(
   String text,
   TextStyle style, {
   TextAlign align = TextAlign.left,
 }) => OutlinedText(text, style: style, outlineWidth: 2, textAlign: align);
 
+/// Returns the default food type with [id]; it must exist.
 FoodType _food(String id) => defaultFoodTypes.firstWhere((t) => t.id == id);
 
+/// Returns the image [asset] fitted into [rect] (card coordinates [px]).
 Widget _image(String asset, Rect rect) => Positioned.fromRect(
   rect: rect,
   child: Image.asset(asset, fit: BoxFit.contain),
 );
 
-/// [text] centred on ([x], [y]).
+/// Returns [text] centred on ([x], [y]) in card coordinates [px].
 Widget _centredText(String text, TextStyle style, double x, double y) =>
     Positioned(
       left: x - 30,

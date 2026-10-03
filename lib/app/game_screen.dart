@@ -1,3 +1,6 @@
+/// The game screen: one play-through with its Flutter layers.
+library;
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -38,6 +41,9 @@ class _GameScreenState extends State<GameScreen> {
   /// The ranking of the current game, for the result popup.
   final _ranking = ValueNotifier<RankingStatus>(const RankingPending());
 
+  /// Returns a new game for the player's current play count, starting the
+  /// setup screen from [placedPendulum] if given (a retry), and recording
+  /// the game when it finishes.
   PendulumFeedingGame _newGame([PendulumState? placedPendulum]) {
     late final PendulumFeedingGame game;
     game = PendulumFeedingGame(
@@ -83,6 +89,7 @@ class _GameScreenState extends State<GameScreen> {
     super.dispose();
   }
 
+  /// Leaves for the title screen.
   void _goToTitle() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
@@ -130,6 +137,8 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Returns the Flutter layers in front of [game] for [phase]: the スタート
+  /// button, the countdown, the retry button, or the result.
   Widget _overlay(PendulumFeedingGame game, GamePhase phase) {
     switch (phase) {
       case GamePhase.setup:

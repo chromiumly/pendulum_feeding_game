@@ -1,15 +1,21 @@
-import 'dart:math' as math;
-
-import 'double_pendulum.dart';
-
 /// Mechanical energy of the double pendulum, for the same point-mass model
-/// as [DoublePendulum]: [PendulumParams.upperMass] at the middle joint and
-/// [PendulumParams.lowerMass] at the lower node. Heights are measured from
+/// as `DoublePendulum`: `PendulumParams.upperMass` at the middle joint and
+/// `PendulumParams.lowerMass` at the lower node. Heights are measured from
 /// hanging straight down, so a pendulum at rest there has zero energy.
 ///
 /// Used to choose start conditions only; the simulation itself does not
 /// use it.
+library;
 
+import 'dart:math' as math;
+
+import 'double_pendulum.dart';
+
+/// Returns the potential energy of [state], zero when both rods hang
+/// straight down.
+///
+/// Like all energies here, it is in the model's own units: mass units x
+/// px²/s², since lengths are in px and gravity in px/s².
 double potentialEnergy(PendulumParams params, PendulumState state) {
   final g = params.gravityAcceleration;
   return (params.upperMass + params.lowerMass) *
@@ -22,6 +28,7 @@ double potentialEnergy(PendulumParams params, PendulumState state) {
           (1 - math.cos(state.lowerTheta));
 }
 
+/// Returns the kinetic energy of [state], from its angular velocities (rad/s).
 double kineticEnergy(PendulumParams params, PendulumState state) {
   final l1 = params.upperLength;
   final l2 = params.lowerLength;
@@ -37,5 +44,6 @@ double kineticEnergy(PendulumParams params, PendulumState state) {
           math.cos(state.upperTheta - state.lowerTheta);
 }
 
+/// Returns the mechanical energy of [state]: potential plus kinetic.
 double totalEnergy(PendulumParams params, PendulumState state) =>
     potentialEnergy(params, state) + kineticEnergy(params, state);

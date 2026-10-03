@@ -1,3 +1,6 @@
+/// The Firebase project the game uses.
+library;
+
 import 'package:firebase_core/firebase_core.dart';
 
 /// Firebase web app settings from the Firebase console. They are meant to

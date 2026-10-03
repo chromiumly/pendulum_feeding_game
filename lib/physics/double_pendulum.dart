@@ -1,3 +1,6 @@
+/// The double-pendulum physics: parameters, state and equations of motion.
+library;
+
 import 'dart:math' as math;
 
 import '../math/vec2.dart';
@@ -16,15 +19,28 @@ class PendulumParams {
     this.gravityAcceleration = 9.81,
   });
 
+  /// Point mass at the middle joint, relative to [lowerMass] (no unit).
   final double upperMass;
+
+  /// Point mass at the lower node: the bride on the swing.
   final double lowerMass;
+
+  /// From the fixed pivot to the middle joint [px].
   final double upperLength;
+
+  /// From the middle joint to the lower node [px].
   final double lowerLength;
+
+  /// Downward acceleration [px/s²].
   final double gravityAcceleration;
 }
 
+/// The double pendulum's state at one instant: both rod angles and their
+/// angular velocities.
+///
 /// Angles are measured from the downward vertical; positive angles swing the
-/// node toward +x.
+/// node toward +x (to the right on screen). They are not normalized: any
+/// real number is valid.
 class PendulumState {
   const PendulumState({
     required this.upperTheta,
@@ -42,6 +58,7 @@ class PendulumState {
     lowerOmega: 0,
   );
 
+  /// Creates a state from [values] in the order of [toList].
   factory PendulumState.fromList(List<double> values) => PendulumState(
     upperTheta: values[0],
     lowerTheta: values[1],
@@ -49,21 +66,32 @@ class PendulumState {
     lowerOmega: values[3],
   );
 
-  /// Angles [rad]
+  /// Angle of the upper rod, pivot to joint [rad].
   final double upperTheta;
+
+  /// Angle of the lower rod, joint to lower node [rad]. Absolute, not
+  /// relative to the upper rod.
   final double lowerTheta;
 
-  /// Angular velocities [rad/s]
+  /// Angular velocity of the upper rod [rad/s].
   final double upperOmega;
+
+  /// Angular velocity of the lower rod [rad/s].
   final double lowerOmega;
 
+  /// Returns [upperTheta, lowerTheta, upperOmega, lowerOmega], the state
+  /// vector the integrator works on.
   List<double> toList() => [upperTheta, lowerTheta, upperOmega, lowerOmega];
 }
 
+/// Where the pendulum's two moving points are, in world coordinates [px].
 class PendulumPositions {
   const PendulumPositions({required this.upper, required this.lower});
 
+  /// The middle joint.
   final Vec2 upper;
+
+  /// The lower node, where the rope meets the bride's swing seat.
   final Vec2 lower;
 }
 
@@ -77,11 +105,14 @@ class DoublePendulum {
 
   final PendulumParams params;
 
+  /// Returns [state] advanced by one RK4 step of [dt] seconds.
   PendulumState step(PendulumState state, double dt) {
     return PendulumState.fromList(rk4Step(state.toList(), dt, derivatives));
   }
 
-  /// Returns [upperOmega, lowerOmega, upperAcceleration, lowerAcceleration].
+  /// Returns the time derivative of [state], a list in the order of
+  /// [PendulumState.toList]: [upperOmega, lowerOmega, upperAcceleration,
+  /// lowerAcceleration], angular accelerations in rad/s².
   List<double> derivatives(List<double> state) {
     final upperMass = params.upperMass;
     final lowerMass = params.lowerMass;
@@ -138,6 +169,8 @@ class DoublePendulum {
     return [upperOmega, lowerOmega, upperAcceleration, lowerAcceleration];
   }
 
+  /// Returns the joint and lower node positions for [state], with the fixed
+  /// pivot at [origin] (world coordinates, y downward) [px].
   PendulumPositions positions(PendulumState state, Vec2 origin) {
     final upper = Vec2(
       origin.x + params.upperLength * math.sin(state.upperTheta),

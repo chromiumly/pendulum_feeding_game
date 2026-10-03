@@ -1,3 +1,6 @@
+/// The two-page how-to-play popup.
+library;
+
 import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
@@ -22,6 +25,7 @@ class HowToPlayPopup extends StatefulWidget {
   static const page1Heading = '遊び方①（操作方法）';
   static const page2Heading = '遊び方②（高得点をとるコツ）';
 
+  /// Called when the × button is pressed.
   final VoidCallback onClose;
 
   @override
@@ -29,8 +33,10 @@ class HowToPlayPopup extends StatefulWidget {
 }
 
 class _HowToPlayPopupState extends State<HowToPlayPopup> {
+  /// Whether page 2 (tips) is shown rather than page 1 (controls).
   bool _onTips = false;
 
+  /// Shows page 2 if [tips], page 1 otherwise.
   void _showTips(bool tips) => setState(() => _onTips = tips);
 
   @override
@@ -105,6 +111,8 @@ class _HowToPlayPopupState extends State<HowToPlayPopup> {
     ),
   ];
 
+  /// Returns the outlined lead [text] of a page, [top] px from the popup's
+  /// top.
   static Widget _lead(String text, {required double top}) => Positioned(
     left: 30,
     top: top,
@@ -131,8 +139,12 @@ class _PageArrowButton extends StatelessWidget {
     required this.onPressed,
   });
 
+  /// What screen readers announce.
   final String semanticLabel;
+
+  /// True for ▶ (next page), false for ◀ (previous page).
   final bool next;
+
   final VoidCallback onPressed;
 
   static const _box = 70.0;

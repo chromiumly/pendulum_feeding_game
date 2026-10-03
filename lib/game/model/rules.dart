@@ -1,11 +1,17 @@
+/// Pure game-rule functions: flight, throwing, hitting, scoring and the food
+/// draw. They are independent of Flame so that they can be unit tested and
+/// reused by the trajectory guide.
+library;
+
 import 'dart:math' as math;
 
 import '../../math/vec2.dart';
 
-/// Pure game-rule functions. They are independent of Flame so that they can be
-/// unit tested and reused by the trajectory guide.
-
-/// One semi-implicit Euler step (velocity first, then position).
+/// Returns a food's position and velocity after one semi-implicit Euler
+/// step (velocity first, then position).
+///
+/// [position] is in world coordinates [px], [velocity] in px/s and
+/// [gravity] in px/s², all with y downward. [dt] is the step [s].
 ({Vec2 position, Vec2 velocity}) stepProjectile({
   required Vec2 position,
   required Vec2 velocity,
@@ -16,7 +22,12 @@ import '../../math/vec2.dart';
   return (position: position + nextVelocity * dt, velocity: nextVelocity);
 }
 
-/// Predicted positions of a launched food, one per [dt], for the aim guide.
+/// Returns the predicted positions of a food thrown from [position] [px]
+/// with [velocity] [px/s] under [gravity] [px/s²], one per [dt] seconds
+/// after the throw, [count] of them, for the aim guide.
+///
+/// It steps exactly as the game does, so with the game's step it matches
+/// the real flight.
 List<Vec2> predictTrajectory({
   required Vec2 position,
   required Vec2 velocity,
@@ -41,8 +52,12 @@ List<Vec2> predictTrajectory({
   return points;
 }
 
-/// Slingshot launch: pulling back from [dragStart] to [dragCurrent] throws
-/// the food in the opposite direction.
+/// Returns the throw velocity [px/s] of a slingshot drag: pulling back from
+/// [dragStart] to [dragCurrent] (world coordinates [px]) throws the food in
+/// the opposite direction.
+///
+/// [scale] is the launch speed per pixel of drag [1/s]; [maxSpeed] [px/s]
+/// caps the result.
 Vec2 launchVelocity({
   required Vec2 dragStart,
   required Vec2 dragCurrent,
@@ -52,8 +67,11 @@ Vec2 launchVelocity({
   return ((dragStart - dragCurrent) * scale).limited(maxSpeed);
 }
 
-/// World position of the bride's mouth. The bride hangs from the lower
-/// pendulum node and is drawn rotated by -lowerTheta.
+/// Returns the world position [px] of the bride's hit circle centre.
+///
+/// The bride hangs from [lowerNode] [px] and is drawn rotated by
+/// -[lowerTheta] [rad] (see `PendulumState`). [mouthOffset] is the centre
+/// relative to [lowerNode] while she hangs upright [px].
 Vec2 brideMouthPosition({
   required Vec2 lowerNode,
   required double lowerTheta,
@@ -124,7 +142,8 @@ List<double> foodProbabilities({required int count, required double bias}) {
   );
 }
 
-/// Draws an index with the given [probabilities], which add up to 1.
+/// Draws an index with the given [probabilities], which add up to 1, using
+/// [random].
 int drawIndex(List<double> probabilities, math.Random random) {
   var r = random.nextDouble();
   for (var i = 0; i < probabilities.length - 1; i++) {
@@ -135,9 +154,11 @@ int drawIndex(List<double> probabilities, math.Random random) {
   return probabilities.length - 1;
 }
 
-/// Whether a circle moving from [from] to [to] touched a circle at [center]
-/// during the step. Sweeping the segment prevents fast food from tunnelling
-/// through the mouth between two steps.
+/// Returns whether a circle moving from [from] to [to] touched a circle at
+/// [center] during the step. Sweeping the segment prevents fast food from
+/// tunnelling through the mouth between two steps.
+///
+/// [radiusSum] is the sum of both circles' radii [px].
 bool sweptCircleHit({
   required Vec2 from,
   required Vec2 to,
@@ -154,6 +175,9 @@ bool sweptCircleHit({
   return closest.distanceTo(center) <= radiusSum;
 }
 
+/// Returns whether a food at [position] with [radius] [px] has left the
+/// world of [worldSize] [px] for good.
+///
 /// The food is gone once it leaves the left, right or bottom edge. Leaving
 /// through the top is allowed because gravity brings it back.
 bool isOutOfWorld({

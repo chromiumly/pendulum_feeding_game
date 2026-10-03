@@ -1,3 +1,6 @@
+/// The fixed 844x390 stage and what is drawn on and over it.
+library;
+
 import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
@@ -53,7 +56,10 @@ class BlurOverlay extends StatelessWidget {
   static const light = Color(0x33FFFFFF);
   static const dark = Color(0x33000000);
 
+  /// Colour laid over the blur, e.g. [light] or [dark].
   final Color tint;
+
+  /// Shown on top of the tint, sharp.
   final Widget? child;
 
   @override

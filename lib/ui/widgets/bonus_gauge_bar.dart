@@ -1,3 +1,6 @@
+/// The gauge bar shared by the play-count bonus displays.
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '../palette.dart';
@@ -12,8 +15,10 @@ class BonusGaugeBar extends StatefulWidget {
     required this.borderWidth,
   });
 
-  /// 0 (empty) to 1 (full).
+  /// 0 (empty) to 1 (full); values outside are clamped.
   final double fraction;
+
+  /// Width of the frame [px].
   final double borderWidth;
 
   @override
@@ -72,9 +77,10 @@ class _BonusGaugeBarState extends State<BonusGaugeBar>
     );
   }
 
-  /// A soft white band, about three times as wide as the bar is tall, that
-  /// moves from left to right across the fill during the first 60% of each
-  /// cycle, and waits outside it for the rest.
+  /// Returns a soft white band, about three times as wide as the bar is
+  /// tall, that moves from left to right across the fill during the first
+  /// 60% of each cycle, and waits outside it for the rest. [fillWidth] and
+  /// [height] are the fill's size [px].
   Widget _highlight(double fillWidth, double height) {
     final width = height * 3;
     return AnimatedBuilder(

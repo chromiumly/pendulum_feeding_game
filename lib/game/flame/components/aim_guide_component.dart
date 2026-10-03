@@ -1,3 +1,6 @@
+/// The trajectory guide shown while the player aims.
+library;
+
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -58,6 +61,7 @@ class AimGuideComponent extends Component {
     _wasAiming = aiming;
   }
 
+  /// Draws the guide while aiming; nothing otherwise.
   @override
   void render(Canvas canvas) {
     final velocity = session.aimVelocity;
@@ -104,11 +108,14 @@ class AimGuideComponent extends Component {
       ..restore();
   }
 
+  /// Returns the band's half width [px] at [t], 0 at the food to 1 at the
+  /// end of the prediction.
   static double _halfWidth(double t) =>
       _startHalfWidth + (_endHalfWidth - _startHalfWidth) * t;
 
-  /// A short light patch on the band around the point the highlight has
-  /// reached, fading towards both of its ends.
+  /// Draws a short light patch on the band around the point the highlight
+  /// has reached, fading towards both of its ends. [points] is the predicted
+  /// path in world coordinates [px].
   void _drawHighlight(Canvas canvas, List<Offset> points) {
     final phase = _time % _sweepPeriod;
     if (phase > _sweepTime) return;
@@ -134,8 +141,9 @@ class AimGuideComponent extends Component {
     );
   }
 
-  /// A closed band along [points], [halfWidth] (of 0 to 1 along the points)
-  /// on each side, as one path so that it has no seams.
+  /// Returns a closed band along [points] (world coordinates [px]), as one
+  /// path so that it has no seams. [halfWidth] gives its half width [px] at
+  /// t, 0 at the first point to 1 at the last.
   static Path _band(List<Offset> points, double Function(double t) halfWidth) {
     final left = <Offset>[];
     final right = <Offset>[];
@@ -148,8 +156,9 @@ class AimGuideComponent extends Component {
     return Path()..addPolygon([...left, ...right.reversed], true);
   }
 
-  /// White, from opaque at the start to transparent at the end, over a band
-  /// wider than everything drawn: multiplying by it fades the guide.
+  /// Returns a mask along [points]: white, from [startAlpha] (0 to 1) at the
+  /// start to transparent at the end, over a band wider than everything
+  /// drawn. Multiplying by it fades the guide.
   static Vertices _fadeMask(List<Offset> points, double startAlpha) {
     final positions = <Offset>[];
     final colors = <Color>[];
@@ -168,7 +177,7 @@ class AimGuideComponent extends Component {
     return Vertices(VertexMode.triangleStrip, positions, colors: colors);
   }
 
-  /// The unit normal of the path at point [i].
+  /// Returns the unit normal of the path through [points] at index [i].
   static Offset _normal(List<Offset> points, int i) {
     final a = points[math.max(0, i - 1)];
     final b = points[math.min(points.length - 1, i + 1)];
@@ -177,6 +186,7 @@ class AimGuideComponent extends Component {
     return Offset(-along.dy, along.dx) / along.distance;
   }
 
+  /// Returns the smallest rectangle around [points].
   static Rect _bounds(List<Offset> points) {
     var left = points.first.dx, right = left;
     var top = points.first.dy, bottom = top;
