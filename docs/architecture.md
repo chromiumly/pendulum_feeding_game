@@ -66,6 +66,7 @@
 - 実際に音を出す部分は `SoundBackend`（インターフェース）に分けてあり、本番は `FlameSoundBackend`（flame_audio）、テストは `test/audio/fake_sound_backend.dart` の偽物を使う。音の失敗（再生できないなど）はゲームに影響させず、静かなままにする。
 - **BGM の OFF は、音量ではなく一時停止**（iPhone の Web は音量を変えられないため）。ON に戻すときは、止めたときの位置に、止めていた時間を足した場所（曲の長さで折り返す。`positionAfterMute`）へ移動してから再開するので、裏で流れ続けていたのと同じように聞こえる。
 - コントローラーはアプリ全体で 1 つ（`main()` で作り、`PendulumFeedingApp` が `SoundScope` で全画面に渡す）。画面が変わっても BGM が途切れないのはこのため。渡さなければ無音で、ボタンも出ない（テストの既定）。
+- 効果音は、最初に ON にしたときに**あらかじめ読み込んだ再生用の部品**（`PreloadedEffects`、flame_audio の `AudioPool`）から鳴らす。鳴らすたびに新しい部品を作って読み込むと、鳴るのが遅れるため。部品の準備ができていない間や、失敗したときは、1 回きりの部品で鳴らす（今までの方法）。
 - 効果音は `GameEvent` から鳴らす（`PendulumFeedingGame._handleEvent`）。ゲームのルール側（`GameSession`）は音を知らない。
 - ボタン（`SoundButton`）は、タイトル画面とゲーム画面の `Stack` の最後に置く。リザルトなどのぼかしの上でも、くっきり押せる。
 

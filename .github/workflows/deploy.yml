@@ -32,6 +32,10 @@ jobs:
 
       - run: flutter pub get
 
+      # Nothing is published unless the code passes both.
+      - run: flutter analyze
+      - run: flutter test
+
       # Project Pages are served from /<repository>/.
       - run: flutter build web --release --base-href /pendulum_feeding_game/
 

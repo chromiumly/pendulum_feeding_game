@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -20,6 +20,9 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="花嫁もぐもぐチャレンジ！">
 
+  <!-- The colour of the browser's own bar; see also manifest.json. -->
+  <meta name="theme-color" content="#C4B396">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -31,8 +34,109 @@
 
   <title>花嫁もぐもぐチャレンジ！</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    The loading screen, shown until the game draws its first frame. The game
+    is a few tens of megabytes to start, so on a slow connection it is a
+    while. Its colours are the game's: the cream of the tile buttons, the
+    brown of the frames, and the orange of the play-count bonus gauge, whose
+    highlight the bar also has. flutter_bootstrap.js moves the bar and then
+    hides the screen.
+  -->
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #FFF8E8;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: #FFF8E8;
+      color: #8B735A;
+      font-family: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN",
+        "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+      font-weight: 700;
+      transition: opacity 0.4s ease;
+    }
+
+    #loading.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loading img {
+      width: 20vmin;
+      max-width: 120px;
+      height: auto;
+    }
+
+    #loading h1 {
+      margin: 0;
+      font-size: clamp(18px, 5vmin, 30px);
+      font-weight: 700;
+    }
+
+    #loading-track {
+      position: relative;
+      width: min(320px, 70vw);
+      height: 22px;
+      box-sizing: border-box;
+      border: 3px solid #8B735A;
+      background: rgba(255, 255, 255, 0.8);
+      overflow: hidden;
+    }
+
+    #loading-bar {
+      position: relative;
+      width: 0;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(to right, #DAAD4D, #FF6912);
+    }
+
+    /* A highlight that sweeps across the bar, as on the game's gauge. */
+    #loading-bar::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 60px;
+      background: linear-gradient(to right,
+        rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.7),
+        rgba(255, 255, 255, 0));
+      animation: sweep 1.6s ease-in-out infinite;
+    }
+
+    @keyframes sweep {
+      from { left: -60px; }
+      to { left: 100%; }
+    }
+
+    #loading p {
+      margin: 0;
+      font-size: 14px;
+      text-align: center;
+      padding: 0 24px;
+    }
+  </style>
 </head>
 <body>
+  <div id="loading" role="status" aria-live="polite">
+    <img src="icons/Icon-192.png" alt="">
+    <h1>花嫁もぐもぐチャレンジ！</h1>
+    <div id="loading-track"><div id="loading-bar"></div></div>
+    <p id="loading-label">読み込み中…</p>
+    <noscript><p>JavaScript を有効にしてください。</p></noscript>
+  </div>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

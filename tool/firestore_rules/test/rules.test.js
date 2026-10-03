@@ -212,8 +212,15 @@ describe('recording a play', () => {
   test('scores must be whole numbers within range', async () => {
     await assertSucceeds(recordPlay({ score: 1262 }));
     await assertFails(recordPlay({ score: -100 }));
-    await assertFails(recordPlay({ score: 100100 }));
     await assertFails(recordPlay({ score: 12.5 }));
+  });
+
+  test('a score is at most 10000, above the best a game can reach', async () => {
+    // The theoretical best is 8700 (docs/scoring.md).
+    await assertSucceeds(recordPlay({ score: 8700 }));
+    await assertSucceeds(recordPlay({ score: 10000, best: null }));
+    await assertFails(recordPlay({ score: 10001 }));
+    await assertFails(recordPlay({ score: 100000 }));
   });
 
   test('createdAt must be the server time', async () => {

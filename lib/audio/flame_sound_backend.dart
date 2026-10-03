@@ -1,9 +1,12 @@
 /// The sound backend that plays the game's files with flame_audio.
 library;
 
+import 'dart:async';
+
 import 'package:flame_audio/flame_audio.dart';
 
 import 'bgm_position.dart';
+import 'preloaded_effects.dart';
 import 'sound_controller.dart';
 
 /// Plays `assets/audio/bgm/bgm.mp3` as the music and [Sfx] files as the
@@ -15,6 +18,9 @@ import 'sound_controller.dart';
 ///
 /// The music also pauses while the app is in the background, and picks up
 /// again when it returns, if it was playing.
+///
+/// The effects are played from pools of players loaded when sound is first
+/// turned on, so that they start at once (see [PreloadedEffects]).
 class FlameSoundBackend implements SoundBackend {
   /// The music's file under `assets/audio/`.
   static const bgmFile = 'bgm/bgm.mp3';
@@ -26,6 +32,12 @@ class FlameSoundBackend implements SoundBackend {
   /// How loud the effects are, from 0 (silent) to 1 (full).
   static const sfxVolume = 1.0;
 
+  /// Players loaded ahead for each effect, and the most that play at once.
+  /// An effect lasts well over a second, and a throw and a meal can follow
+  /// each other quickly.
+  static const effectPlayersAhead = 2;
+  static const effectPlayersMost = 4;
+
   /// Whether the music has been started.
   bool _started = false;
 
@@ -36,8 +48,25 @@ class FlameSoundBackend implements SoundBackend {
   /// Where the music was when it was last silenced.
   Duration _positionAtMute = Duration.zero;
 
+  late final _effects = PreloadedEffects(
+    volume: sfxVolume,
+    createPool: (sfx) async => _FlameEffectPool(
+      await FlameAudio.createPool(
+        sfx.file,
+        minPlayers: effectPlayersAhead,
+        maxPlayers: effectPlayersMost,
+      ),
+    ),
+    playOnce: (sfx) async {
+      await FlameAudio.play(sfx.file, volume: sfxVolume);
+    },
+  );
+
   @override
   Future<void> unmuteBgm() async {
+    // However often this runs, only what is missing is made.
+    unawaited(_effects.prepare());
+
     final player = FlameAudio.bgm.audioPlayer;
     if (!_started) {
       // Registers once, however often it is called.
@@ -72,7 +101,18 @@ class FlameSoundBackend implements SoundBackend {
   }
 
   @override
-  Future<void> playSfx(Sfx sfx) async {
-    await FlameAudio.play(sfx.file, volume: sfxVolume);
+  Future<void> playSfx(Sfx sfx) => _effects.play(sfx);
+}
+
+/// An [EffectPool] on flame_audio's [AudioPool].
+class _FlameEffectPool implements EffectPool {
+  _FlameEffectPool(this._pool);
+
+  final AudioPool _pool;
+
+  /// A player goes back to the pool by itself when its effect ends.
+  @override
+  Future<void> start(double volume) async {
+    await _pool.start(volume: volume);
   }
 }

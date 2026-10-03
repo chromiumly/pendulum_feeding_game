@@ -178,7 +178,7 @@ class GameConfig {
 /// 150 points, and each next one 5 fewer: 150 - 5 x (rank - 1).
 const defaultFoodTypes = [
   FoodType(id: 'parfait', points: 150), // 1. パフェ
-  FoodType(id: 'pino', points: 145), // 2. ピノ
+  FoodType(id: 'pico', points: 145), // 2. ピコ
   FoodType(id: 'shrimp_tempura', points: 140), // 3. 海老の天ぷら
   FoodType(id: 'melon_ice_cream', points: 135), // 4. メロンソフトクリーム
   FoodType(id: 'hitsumabushi', points: 130), // 5. ひつまぶし
@@ -195,6 +195,6 @@ const defaultFoodTypes = [
   FoodType(id: 'nikuman', points: 75), // 16. 肉まん
   FoodType(id: 'curry', points: 70), // 17. カレーライス
   FoodType(id: 'tea', points: 65), // 18. 紅茶
-  FoodType(id: 'jagariko', points: 60), // 19. じゃがりこ
+  FoodType(id: 'jagapori', points: 60), // 19. じゃがポリ
   FoodType(id: 'sweet_potato', points: 55), // 20. 焼き芋
 ];

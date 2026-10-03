@@ -3,10 +3,10 @@
     "short_name": "もぐもぐチャレンジ",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
+    "background_color": "#FFF8E8",
+    "theme_color": "#C4B396",
     "description": "花嫁もぐもぐチャレンジ！",
-    "orientation": "portrait-primary",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {

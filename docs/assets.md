@@ -10,6 +10,7 @@
 | `assets/images/` | ゲームに同梱する画像。背景以外は `tool/images.dart` が `art/` から作る |
 | `assets/icons/` | Figma から書き出したボタンのアイコン（SVG） |
 | `assets/audio/` | ゲームに同梱する BGM（`bgm/`）と効果音（`sfx/`）。mp3。`tool/audio.dart` が `art/audio/` から作る |
+| `web/` | ブラウザのタブのアイコン（`favicon.png`）とホーム画面のアイコン（`icons/`）。`tool/icons.dart` が作る |
 | `assets/fonts/` | M PLUS Rounded 1c（Bold）と Inter（Bold、ExtraBold）。ライセンスは同じフォルダの `OFL-*.txt` |
 
 画像とアイコンのパスは `lib/ui/assets.dart` にまとめている。
@@ -28,6 +29,21 @@ dart run tool/images.dart
 - **背景**（`assets/images/background/background.png`）は、画面の大きさと大差ないので、ツールでは扱わない。
 
 `test/ui/food_assets_test.dart` が、`art/` と `assets/images/` の画像が過不足なく対応していること（ツールの実行し忘れ）を確かめる。
+
+## Web アプリのアイコン
+
+ブラウザのタブ（`web/favicon.png`、32px）と、ホーム画面に追加したときのアイコン（`web/icons/` の 192px と 512px、それぞれ通常用とマスク用）は、食べ物の**パフェ**の画像から作る。
+
+```bash
+dart run tool/icons.dart
+```
+
+- パフェは縦長なので、元画像（`art/food/parfait.png`）の**上の正方形**（クリーム、フルーツ、グラスのふち）を使い、下を切る。
+- ホーム画面は透明なアイコンを扱いにくいので、ゲームのタイル（クリーム色 #FFF8E8）の上に置く。
+- マスク用は、端末が角を丸や円に切るので、余白を大きく取って、中身が円の内側（中央の 80%）に収まるようにする。
+- 色や、パフェが占める割合は `tool/icons.dart` の `_background` と `_plainFill` などで変える。
+- `web/manifest.json` の色は、ゲームに合わせてある（背景: クリーム #FFF8E8、テーマ: ポップアップの枠の色 #C4B396）。**向きは `landscape`** で、`portrait-primary` のままだと、ホーム画面から開いたときに縦向きに固定されて、「横向きにしてください」のまま進めなくなる。
+- `test/ui/web_assets_test.dart` が、アイコンの大きさ、向き、色を確かめる。
 
 ## 音声
 

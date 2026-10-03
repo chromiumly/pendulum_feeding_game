@@ -36,9 +36,13 @@ service cloud.firestore {
       return /databases/$(database)/documents/scores/$(playId);
     }
 
-    // Food points with the combo bonus can be any whole number.
+    // Food points with the combo bonus can be any whole number. The most a
+    // game can score is 8700 (20 foods in a row, the best one at 150 points,
+    // see docs/scoring.md); the limit sits a little above it, so that a
+    // made-up score is turned away. Raise it if the scoring is changed to
+    // allow more.
     function validScore(score) {
-      return score is int && score >= 0 && score <= 100000;
+      return score is int && score >= 0 && score <= 10000;
     }
 
     function validPlayId(playId) {
