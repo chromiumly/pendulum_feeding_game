@@ -4,7 +4,7 @@ import 'package:pendulum_feeding_game/audio/sound_controller.dart';
 
 /// A [SoundBackend] that records what it is asked to play.
 class FakeSoundBackend implements SoundBackend {
-  /// Calls in order: 'unmute', 'mute', or the played effect.
+  /// Calls in order: 'unmute', 'mute', the played effect, or 'stop' and the effect's name.
   final calls = <Object>[];
 
   /// If set, every call throws it.
@@ -32,6 +32,12 @@ class FakeSoundBackend implements SoundBackend {
   @override
   Future<void> playSfx(Sfx sfx) async {
     calls.add(sfx);
+    if (failWith != null) throw failWith!;
+  }
+
+  @override
+  Future<void> stopSfx(Sfx sfx) async {
+    calls.add('stop ${sfx.name}');
     if (failWith != null) throw failWith!;
   }
 }

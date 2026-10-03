@@ -107,10 +107,30 @@ void main() {
     expect(backend.effects, contains(Sfx.throwFood));
   });
 
+  test('an effect can be cut off, with sound on or off', () async {
+    sound.setEnabled(true);
+    sound.playSfx(Sfx.claps);
+    sound.stopSfx(Sfx.claps);
+    sound.setEnabled(false);
+    sound.stopSfx(Sfx.claps);
+    await pumpEventQueue();
+    // The music's calls wait in line behind each other; the effects' do not.
+    expect(
+      backend.calls.where((call) => call == Sfx.claps || call == 'stop claps'),
+      [Sfx.claps, 'stop claps', 'stop claps'],
+    );
+  });
+
+  test('a failing backend does not break stopping an effect', () async {
+    backend.failWith = StateError('gone');
+    expect(() => sound.stopSfx(Sfx.claps), returnsNormally);
+    await pumpEventQueue();
+  });
+
   test('every effect has its file under assets/audio/', () {
     expect(
       {for (final s in Sfx.values) s.file},
-      {'sfx/throw.mp3', 'sfx/eat.mp3'},
+      {'sfx/throw.mp3', 'sfx/eat.mp3', 'sfx/whistle.mp3', 'sfx/claps.mp3'},
     );
   });
 

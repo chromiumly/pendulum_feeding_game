@@ -16,7 +16,7 @@
 | `lib/ranking/` | プレイヤー ID、記録とランキング、Firebase との接続 |
 | `lib/audio/` | 音の ON/OFF（`SoundController`）、BGM の位置の計算、flame_audio で鳴らす実装（`FlameSoundBackend`） |
 | `assets/` | ゲームに同梱する画像・アイコン・フォント（[assets.md](assets.md)） |
-| `art/` | 画像と音声の元データ。`tool/images.dart` と `tool/audio.dart` で `assets/` の画像と音声を作る |
+| `art/` | 画像・音声・フォントの元データ。`tool/images.dart`、`tool/audio.dart`、`tool/fonts.dart` で `assets/` の画像・音声・フォントを作る |
 | `tool/` | 開発用スクリプト（画像と音声の作成、プレイヤー ID の管理、Firestore ルールのテスト、TS 版との比較データ作成） |
 | `test/` | 単体テストとウィジェットテスト |
 
@@ -67,7 +67,8 @@
 - **BGM の OFF は、音量ではなく一時停止**（iPhone の Web は音量を変えられないため）。ON に戻すときは、止めたときの位置に、止めていた時間を足した場所（曲の長さで折り返す。`positionAfterMute`）へ移動してから再開するので、裏で流れ続けていたのと同じように聞こえる。
 - コントローラーはアプリ全体で 1 つ（`main()` で作り、`PendulumFeedingApp` が `SoundScope` で全画面に渡す）。画面が変わっても BGM が途切れないのはこのため。渡さなければ無音で、ボタンも出ない（テストの既定）。
 - 効果音は、最初に ON にしたときに**あらかじめ読み込んだ再生用の部品**（`PreloadedEffects`、flame_audio の `AudioPool`）から鳴らす。鳴らすたびに新しい部品を作って読み込むと、鳴るのが遅れるため。部品の準備ができていない間や、失敗したときは、1 回きりの部品で鳴らす（今までの方法）。
-- 効果音は `GameEvent` から鳴らす（`PendulumFeedingGame._handleEvent`）。ゲームのルール側（`GameSession`）は音を知らない。
+- 効果音は `GameEvent` から鳴らす（`PendulumFeedingGame._handleEvent`）。ゲームのルール側（`GameSession`）は音を知らない。「START」のホイッスルは `StartCueShown` イベント、リザルトの拍手は、リザルトが実際に出る切り替え（`_publish`）で鳴らす。
+- 鳴っている効果音は止められる（`SoundController.stopSfx`）。`PreloadedEffects` が、鳴らした効果音の止める関数（`AudioPool.start` が返す）を覚えていて、鳴らす途中で止める指示が来た分も止める。結果画面の「もう一度」「タイトルへ」が、拍手を止める（`GameScreen`）。
 - ボタン（`SoundButton`）は、タイトル画面とゲーム画面の `Stack` の最後に置く。リザルトなどのぼかしの上でも、くっきり押せる。
 
 ## テスト

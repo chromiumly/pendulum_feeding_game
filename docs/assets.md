@@ -6,14 +6,14 @@
 
 | パス | 中身 |
 |---|---|
-| `art/` | 画像と音声の元データ（大きな原寸）。ゲームには同梱しない |
-| `assets/images/` | ゲームに同梱する画像。背景以外は `tool/images.dart` が `art/` から作る |
+| `art/` | 画像・音声・フォントの元データ（大きな原寸）。ゲームには同梱しない |
+| `assets/images/` | ゲームに同梱する画像。WebP。`tool/images.dart` が `art/` から作る |
 | `assets/icons/` | Figma から書き出したボタンのアイコン（SVG） |
 | `assets/audio/` | ゲームに同梱する BGM（`bgm/`）と効果音（`sfx/`）。mp3。`tool/audio.dart` が `art/audio/` から作る |
 | `web/` | ブラウザのタブのアイコン（`favicon.png`）とホーム画面のアイコン（`icons/`）。`tool/icons.dart` が作る |
-| `assets/fonts/` | M PLUS Rounded 1c（Bold）と Inter（Bold、ExtraBold）。ライセンスは同じフォルダの `OFL-*.txt` |
+| `assets/fonts/` | M PLUS Rounded 1c（Bold）と Inter（Bold、ExtraBold）を、ゲームで使う文字だけに絞ったもの。`tool/fonts.dart` が `art/fonts/` から作る。ライセンスは同じフォルダの `OFL-*.txt` |
 
-画像とアイコンのパスは `lib/ui/assets.dart` にまとめている。
+画像（WebP）とアイコンのパスは `lib/ui/assets.dart` にまとめている。
 
 ## 画像の作り方
 
@@ -23,12 +23,28 @@
 dart run tool/images.dart
 ```
 
-- 出力は、ゲームで描く大きさの **4 倍**の解像度（高精細なスマートフォンの画面でもぼやけないように）。
+- 出力はすべて **WebP**（画質 95、透明部分は画質 100）。PNG に比べて、合計が約 3.5MB から約 0.6MB になる。見た目の違いは、拡大して比べても分からない程度。不可逆の圧縮なので、**必ず `art/` の原画から作る**（出力した WebP を元にしない）。
+- WebP への変換に `cwebp` が要る（`sudo apt install webp`、`brew install webp`）。PATH にないときは、環境変数 `CWEBP` にパスを入れる。
+- 解像度は、ゲームで描く大きさの **4 倍**の解像度（高精細なスマートフォンの画面でもぼやけないように）。
 - **食べ物**（`art/food/` → `assets/images/food/`）: 透明な余白を切り取り、見た目がそろうように大きさを決める。縦長・横長の食べ物が極端に大きく・小さく見えないよう、「見えている面積の円の直径」と「長辺」の幾何平均が一定（58 px）になるように縮小する。ゲームは全種類を同じ倍率（1/4）で描く。
 - **そのほか**（効果、新婦、新郎、支点）: `tool/images.dart` の `_sprites` に、描く最大の幅と、余白を切り取るかどうかを登録する。新婦・新郎・支点は、コード側で画像全体に対する位置（足元や座面）を使うので、余白を切り取らない。登録のない画像が `art/` にあると、ツールはエラーで止まる。
-- **背景**（`assets/images/background/background.png`）は、画面の大きさと大差ないので、ツールでは扱わない。
+- **背景**（`art/background/background.png`）は、画面の大きさと大差ないので、縮小せず、WebP にするだけ。
 
 `test/ui/food_assets_test.dart` が、`art/` と `assets/images/` の画像が過不足なく対応していること（ツールの実行し忘れ）を確かめる。
+
+## フォントの作り方
+
+フォントは、使う文字だけに絞って同梱している。日本語のフォントは 3.5MB あり、スマートフォンは最初の画面の前にそれを全部読み込むことになるが、ゲームが書く日本語は百数十文字で、絞れば 75KB になる（Inter も 410KB が 56KB）。
+
+```bash
+dart run tool/fonts.dart
+```
+
+- 元のフォントは `art/fonts/` に置く。`assets/fonts/` に同じ名前で書き出すので、`pubspec.yaml` は変わらない。
+- 残す文字: ASCII の印字できる文字すべて（スコアや時間などの数字、英字、記号）と、日本語のフォントには加えて、`lib/` の**文字列リテラルに出てくる文字**。コメントは読まない。元のフォントにない文字が文字列にあるとエラーになる。
+- 文字列を足したら、このコマンドを実行する。**実行し忘れると、その文字が表示されない**（空白になる）。`test/ui/fonts_test.dart` が `lib/` の文字がすべてフォントに入っているかを、フォントの文字表（cmap）を読んで確かめるので、実行し忘れは `flutter test` で分かる。
+- `pyftsubset` が要る（`pip install fonttools`）。PATH にないときは、環境変数 `PYFTSUBSET` にパスを入れる。
+- フォントのライセンス（SIL OFL）は、加工して配ることを認めている。ライセンス全文は `assets/fonts/OFL-*.txt` に、フォントと一緒に置いている。
 
 ## Web アプリのアイコン
 
@@ -58,6 +74,8 @@ dart run tool/audio.dart
 - **効果音は、音が始まる直前まで先頭を切る。** 元の音源には、音が出るまで約 0.1 秒の無音があり、鳴らしてから聞こえるまでが遅く感じられたため。`_recipes` の `trimBelow` に、「この音量に届いたら始まったと見なす」値を音声ごとに指定する。クリック音が出ないよう、始まりの 5ms は残し、3ms かけて音量を上げる。
   - 食べる音: -60dB（聞こえない大きさ）まで。約 96ms 切った。
   - 投げる音: -26dB まで。この音は、本体（-17dB 前後）の前に、約 50ms の小さなかすれ音（-40dB 前後）があり、投げる操作の直後に鳴らすとそのぶん遅く感じるため、そこまで切った。約 126ms 切った。
+  - ホイッスルと拍手: どちらも -60dB まで。約 0.11 秒切った（ホイッスルは「START」が出る瞬間に、拍手はリザルトが出る瞬間に鳴らすため）。
+- 音量の調整（`gainDb`、デシベル）も `_recipes` に登録する。0 なら、そのまま。
   - 元は `art/audio/` にそのまま残るので、切る量はいつでも変えられる。
 - **ffmpeg** が必要（`sudo apt install ffmpeg` や `brew install ffmpeg`。パスが通っていなければ、環境変数 `FFMPEG` にパスを入れる）。
 
@@ -66,8 +84,11 @@ dart run tool/audio.dart
 | `bgm/bgm.mp3` | BGM（ループ用の版）。最後まで再生すると最初から繰り返す |
 | `sfx/throw.mp3` | 食べ物を投げたとき |
 | `sfx/eat.mp3` | 新婦が食べたとき |
+| `sfx/whistle.mp3` | カウントダウンの「START」が出たとき |
+| `sfx/claps.mp3` | リザルト画面が出たとき |
 
-- 音量は `lib/audio/flame_sound_backend.dart` の `bgmVolume`（0.5）と `sfxVolume`（1.0）で変える。
+- 音量は `lib/audio/flame_sound_backend.dart` の `bgmVolume`（0.3）と `sfxVolume`（1.0）で変える。
+- **音量のバランス**: 音声の大きさを EBU R128 の統合ラウドネス（ffmpeg の `ebur128`）で測って決めた。効果音は 4 つとも約 -19 LUFS（-18.7〜-19.9）にそろえ、BGM は音量 0.3 で約 -23 LUFS（効果音より約 3.5 LU 小さい）。BGM は元が -12.6 LUFS と大きいため、音量を下げている。拍手だけは元が約 -25 LUFS と小さく、BGM に埋もれやすいので、`tool/audio.dart` の `gainDb` で +5dB 上げた（ピークは -4.3dBFS で、音割れしない）。BGM だけを変えたいときは `bgmVolume`、効果音の大きさをそろえ直したいときは `_recipes` の `gainDb` を変える。
 - 効果音を足すときは、`art/audio/sfx/` に置き、`tool/audio.dart` の `_recipes` と `lib/audio/sound_controller.dart` の `Sfx` に追加し、鳴らす場所（`PendulumFeedingGame._handleEvent`）を書く。出典は、下の「出典とクレジット」にも足す。
 - mp3 は Safari を含むどのブラウザでも鳴る。
 
@@ -75,7 +96,7 @@ dart run tool/audio.dart
 
 ## 食べ物を変えるとき
 
-食べ物の一覧（ID と点数、好物の順）は `lib/game/model/game_config.dart` の `defaultFoodTypes`。画像のファイル名は ID と同じ（`assets/images/food/<id>.png`）。点数の決め方は [scoring.md](scoring.md)。
+食べ物の一覧（ID と点数、好物の順）は `lib/game/model/game_config.dart` の `defaultFoodTypes`。画像のファイル名は ID と同じ（`assets/images/food/<id>.webp`）。点数の決め方は [scoring.md](scoring.md)。
 
 ## 出典とクレジット
 
@@ -95,6 +116,8 @@ dart run tool/audio.dart
 |---|---|---|
 | 食べたとき | `eat.mp3` | Anime_Motion15-1(High) |
 | 投げたとき | `throw.mp3` | Motion-Agility01-2(Low) |
+| スタートの合図 | `whistle.mp3` | SNES-Soccer01-05(Whistle) |
+| リザルトの拍手 | `claps.mp3` | Applause02-6(Far-Short) |
 
 - 表記は、**OtoLogic**（https://otologic.jp/）の利用規約が指定する形に合わせる。README の Credits と、ゲーム内の遊び方の 3 ページ目「クレジット」に書いてある（文面は `lib/app/how_to_play_credits.dart` の `creditGroups`）。
 - `tool/audio.dart` で作り直すと、ファイルのタグ（作者名や効果音名）は捨てられる。元の音源は `art/audio/sfx/` にそのまま残している。

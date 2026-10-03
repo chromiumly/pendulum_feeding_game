@@ -25,9 +25,10 @@ class FlameSoundBackend implements SoundBackend {
   /// The music's file under `assets/audio/`.
   static const bgmFile = 'bgm/bgm.mp3';
 
-  /// How loud the music is, from 0 (silent) to 1 (full). Lower than the
-  /// effects, so that they can be heard over it.
-  static const bgmVolume = 0.5;
+  /// How loud the music is, from 0 (silent) to 1 (full). Well below the
+  /// effects, so that they can be heard over it: measured, the music at this
+  /// volume is about 3.5 LU quieter than the effects (see docs/assets.md).
+  static const bgmVolume = 0.3;
 
   /// How loud the effects are, from 0 (silent) to 1 (full).
   static const sfxVolume = 1.0;
@@ -58,7 +59,8 @@ class FlameSoundBackend implements SoundBackend {
       ),
     ),
     playOnce: (sfx) async {
-      await FlameAudio.play(sfx.file, volume: sfxVolume);
+      final player = await FlameAudio.play(sfx.file, volume: sfxVolume);
+      return player.stop;
     },
   );
 
@@ -102,6 +104,9 @@ class FlameSoundBackend implements SoundBackend {
 
   @override
   Future<void> playSfx(Sfx sfx) => _effects.play(sfx);
+
+  @override
+  Future<void> stopSfx(Sfx sfx) => _effects.stop(sfx);
 }
 
 /// An [EffectPool] on flame_audio's [AudioPool].
@@ -110,9 +115,8 @@ class _FlameEffectPool implements EffectPool {
 
   final AudioPool _pool;
 
-  /// A player goes back to the pool by itself when its effect ends.
+  /// A player goes back to the pool by itself when its effect ends, and
+  /// the stop function does nothing after that.
   @override
-  Future<void> start(double volume) async {
-    await _pool.start(volume: volume);
-  }
+  Future<StopEffect> start(double volume) => _pool.start(volume: volume);
 }

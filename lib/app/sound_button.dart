@@ -12,9 +12,9 @@ import 'sound_scope.dart';
 
 /// The one switch for all sound, at the bottom left of the stage.
 ///
-/// Which state it is in shows three ways at once: the icon (a speaker with
-/// waves, or a dim one with a red cross), the caption (ON, or OFF in red),
-/// and the colour. It is a child of the screen's stage `Stack`, drawn last so
+/// Which state it is in shows two ways at once: the icon (a speaker with
+/// waves, or a dim one with a cross) and the caption (ON or OFF). Like the
+/// other buttons, it is all in the dark brown of their icons. It is a child of the screen's stage `Stack`, drawn last so
 /// that it stays on top, sharp and pressable, also over blurred popups. It
 /// shows nothing in an app without sound.
 class SoundButton extends StatelessWidget {
@@ -46,7 +46,7 @@ class SoundButton extends StatelessWidget {
             iconSize: const Size(42, 32),
             caption: on ? 'ON' : 'OFF',
             captionStyle: GameTextStyles.soundCaption.copyWith(
-              color: on ? Palette.brown : Palette.accentRed,
+              color: Palette.darkBrown,
             ),
             semanticLabel: on ? turnOffLabel : turnOnLabel,
             onPressed: sound.toggle,

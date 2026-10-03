@@ -174,6 +174,7 @@ void main() {
     expect(find.text(HowToPlayPopup.page3Heading), findsOneWidget);
     expect(find.text(HowToPlayPopup.page2Heading), findsNothing);
     expect(find.text('Jumpei Kurokawa'), findsOneWidget);
+    expect(find.text('Yuria Otsuka'), findsOneWidget);
     expect(find.text(HowToPlayPopup.recordNote), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('前のページ'));

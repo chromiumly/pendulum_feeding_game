@@ -10,11 +10,14 @@ import '../ui/widgets/outlined_text.dart';
 /// One line of the credits: an item and its value, e.g. 効果音 and OtoLogic.
 typedef CreditLine = ({String label, String value});
 
-/// The credits, in groups that are set apart: who made the game, then where
-/// its assets come from. Keep the wording of the sources in line with what
+/// The credits, in groups that are set apart: who made the game and who
+/// watched over it, then where its assets come from. Keep the wording of the sources in line with what
 /// their terms ask for, and with docs/assets.md.
 const creditGroups = <List<CreditLine>>[
-  [(label: '制作', value: 'Jumpei Kurokawa')],
+  [
+    (label: '制作', value: 'Jumpei Kurokawa'),
+    (label: '見守り', value: 'Yuria Otsuka'),
+  ],
   [
     (label: '効果音', value: 'OtoLogic（https://otologic.jp/）'),
     (label: 'BGM', value: 'Google Flow Music'),
@@ -33,10 +36,10 @@ class CreditsTable extends StatelessWidget {
   const CreditsTable({super.key});
 
   /// Distance from one row to the next within a group [px].
-  static const rowHeight = 32.0;
+  static const rowHeight = 30.0;
 
   /// Extra space between two groups [px].
-  static const groupGap = 16.0;
+  static const groupGap = 14.0;
 
   /// Width of the items column, which is where the values begin [px]. Wide
   /// enough for the longest item, with room to spare.

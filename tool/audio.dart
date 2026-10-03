@@ -26,23 +26,39 @@ import 'dart:io';
 /// How to make one file: the MP3 bitrate to re-encode at (e.g. `80k`), or
 /// null to copy it as it is because it is small already; and how loud the
 /// sound must get to count as begun, so that everything before it is cut
-/// (e.g. `-60dB`), or null to cut nothing. Cutting needs re-encoding.
-typedef _Recipe = ({String? bitrate, String? trimBelow});
+/// (e.g. `-60dB`), or null to cut nothing; and how many decibels louder
+/// (negative: quieter) to make it, 0 for as it is. Cutting and changing the
+/// level need re-encoding.
+typedef _Recipe = ({String? bitrate, String? trimBelow, double gainDb});
 
 /// The recipe of each file under `art/audio/`, by its path under it. A file
 /// missing here is an error, so that no heavy file is shipped by accident.
 ///
 /// Levels are relative to the loudest possible sample: -60 dB is 0.1%, far
 /// below anything heard.
+///
+/// The effects are meant to be about equally loud, and a few LU above the
+/// music, which `FlameSoundBackend.bgmVolume` sets. Measured (EBU R128
+/// integrated loudness, the `ebur128` filter of ffmpeg) the effects are at
+/// about -19 LUFS, the applause alone at -25, so it is lifted to match.
 const _recipes = <String, _Recipe>{
-  'bgm/bgm.mp3': (bitrate: '80k', trimBelow: null),
+  'bgm/bgm.mp3': (bitrate: '80k', trimBelow: null, gainDb: 0),
   // At 128 kbps the effects are about 27 KB each, and the cut does not wear
   // their quality further.
-  'sfx/eat.mp3': (bitrate: '128k', trimBelow: '-60dB'),
+  'sfx/eat.mp3': (bitrate: '128k', trimBelow: '-60dB', gainDb: 0),
   // The throw opens with about 50 ms of faint rustle (around -40 dB) before
   // its body, which comes in at about -17 dB. The rustle only makes it feel
   // late after the release that throws it, so it is cut too.
-  'sfx/throw.mp3': (bitrate: '128k', trimBelow: '-26dB'),
+  'sfx/throw.mp3': (bitrate: '128k', trimBelow: '-26dB', gainDb: 0),
+  // Both begin after about 0.11 s of silence, which is cut so that the
+  // whistle sounds as "START" appears, and the applause as the result does.
+  'sfx/whistle.mp3': (bitrate: '128k', trimBelow: '-60dB', gainDb: 0),
+  'sfx/claps.mp3': (
+    bitrate: '128k',
+    trimBelow: '-60dB',
+    gainDb: 5, // From about -25 LUFS to the others' -19 or so; its peak
+    // goes from -9.6 to -4.6 dBFS, still clear of clipping.
+  ),
 };
 
 /// How much is kept before the sound reaches the level that counts as begun
@@ -84,7 +100,13 @@ void main() {
     if (bitrate == null) {
       source.copySync(target.path);
     } else {
-      _encode(source, target, bitrate, trimBelow: recipe.trimBelow);
+      _encode(
+        source,
+        target,
+        bitrate,
+        trimBelow: recipe.trimBelow,
+        gainDb: recipe.gainDb,
+      );
     }
     stdout.writeln(
       '${path.padRight(28)}${_kb(source.lengthSync()).padLeft(10)}'
@@ -96,13 +118,23 @@ void main() {
 /// Re-encodes [source] to [target] as MP3 at [bitrate] (e.g. `80k`) without
 /// pictures or tags. Unless [trimBelow] is null, also cuts everything before
 /// the sound first gets louder than that (e.g. `-60dB`), and fades the new
-/// start in. Exits with an error if ffmpeg is missing or fails.
+/// start in. Unless [gainDb] is 0, also makes it that many decibels louder.
+/// Exits with an error if ffmpeg is missing or fails.
 void _encode(
   File source,
   File target,
   String bitrate, {
   required String? trimBelow,
+  required double gainDb,
 }) {
+  final filters = [
+    if (trimBelow != null) ...[
+      'silenceremove=start_periods=1:start_threshold=$trimBelow'
+          ':start_silence=$_keptLead:detection=peak',
+      'afade=t=in:d=$_fadeIn',
+    ],
+    if (gainDb != 0) 'volume=${gainDb}dB',
+  ];
   final ffmpeg = Platform.environment['FFMPEG'] ?? 'ffmpeg';
   final ProcessResult result;
   try {
@@ -112,12 +144,7 @@ void _encode(
       '-i', source.path,
       '-vn', // No album art.
       '-map_metadata', '-1', // No tags.
-      if (trimBelow != null) ...[
-        '-af',
-        'silenceremove=start_periods=1:start_threshold=$trimBelow'
-            ':start_silence=$_keptLead:detection=peak,'
-            'afade=t=in:d=$_fadeIn',
-      ],
+      if (filters.isNotEmpty) ...['-af', filters.join(',')],
       '-ar', '$_sampleRate',
       '-codec:a', 'libmp3lame',
       '-b:a', bitrate,

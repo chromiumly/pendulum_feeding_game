@@ -26,6 +26,7 @@ GameSession _session([GameConfig config = const GameConfig()]) {
   final session = _setupSession(config)..startCountdown();
   _runCountdown(session);
   expect(session.phase, GamePhase.playing);
+  session.takeEvents(); // The cue's, which tests of play do not look at.
   return session;
 }
 
@@ -128,9 +129,44 @@ void main() {
         expect(state.lowerOmega, greaterThan(0));
         expect(state.upperOmega, closeTo(-state.lowerOmega, 1e-12));
         expect(session.remainingSeconds, 20);
-        expect(session.takeEvents(), isEmpty);
+        // The only event is the cue, once; see the next test.
+        expect(session.takeEvents(), [isA<StartCueShown>()]);
       },
     );
+
+    test('the start cue is reported once, in the step START appears', () {
+      final session = _setupSession()..startCountdown();
+      final countdownSteps = session.config.countdownSteps;
+      for (var i = 1; i < countdownSteps; i++) {
+        session.step();
+      }
+      // The last step of "1": not yet.
+      expect(session.countdownNumber, 1);
+      expect(session.takeEvents(), isEmpty);
+
+      session.step();
+      expect(session.countdownNumber, 0);
+      expect(session.takeEvents(), [isA<StartCueShown>()]);
+
+      // Not again through "START" or when play begins.
+      for (var i = 0; i < session.config.startCueSteps + 10; i++) {
+        session.step();
+      }
+      expect(session.phase, GamePhase.playing);
+      expect(session.takeEvents(), isEmpty);
+    });
+
+    test('there is no cue without a countdown or a cue to show', () {
+      for (final config in [
+        const GameConfig(countdownSeconds: 0, startCueSeconds: 0),
+        const GameConfig(countdownSeconds: 0),
+        const GameConfig(startCueSeconds: 0),
+      ]) {
+        final session = _setupSession(config)..startCountdown();
+        _runCountdown(session);
+        expect(session.takeEvents(), isEmpty, reason: '$config');
+      }
+    });
 
     test('the countdown can only be started from setup', () {
       final session = _session()..startCountdown();

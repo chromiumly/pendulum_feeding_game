@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/game/model/game_config.dart';
 import 'package:pendulum_feeding_game/ui/assets.dart';
 
-Set<String> _pngNames(String dir) => {
+/// The names of the images in [dir] without their extensions, so that an
+/// original (`.png` in art/) and its WebP in assets/ compare equal.
+Set<String> _imageNames(String dir) => {
   for (final file in Directory(dir).listSync().whereType<File>())
-    if (file.path.endsWith('.png')) file.uri.pathSegments.last,
+    if (file.path.endsWith('.png') || file.path.endsWith('.webp'))
+      file.uri.pathSegments.last.split('.').first,
 };
 
 void main() {
@@ -17,22 +20,23 @@ void main() {
   });
 
   test('every food has an image, and every image is a food', () {
-    expect(_pngNames('assets/images/food'), {
-      for (final id in ids) GameAssets.food(id).split('/').last,
+    expect(_imageNames('assets/images/food'), {
+      for (final id in ids)
+        GameAssets.food(id).split('/').last.split('.').first,
     });
   });
 
   test('every food image is made from its art', () {
     // Run `dart run tool/images.dart` after changing art/food/.
-    expect(_pngNames('art/food'), _pngNames('assets/images/food'));
+    expect(_imageNames('art/food'), _imageNames('assets/images/food'));
   });
 
   test('every other image is made from its art', () {
     // Run `dart run tool/images.dart` after changing art/.
-    for (final dir in ['effects', 'bride', 'groom', 'pendulum']) {
+    for (final dir in ['background', 'effects', 'bride', 'groom', 'pendulum']) {
       expect(
-        _pngNames('assets/images/$dir'),
-        _pngNames('art/$dir'),
+        _imageNames('assets/images/$dir'),
+        _imageNames('art/$dir'),
         reason: dir,
       );
     }

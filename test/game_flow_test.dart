@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/app/app.dart';
 import 'package:pendulum_feeding_game/app/result_popup.dart';
+import 'package:pendulum_feeding_game/audio/sound_controller.dart';
 import 'package:pendulum_feeding_game/game/flame/components/stage_components.dart';
 import 'package:pendulum_feeding_game/game/flame/pendulum_feeding_game.dart';
 import 'package:pendulum_feeding_game/game/model/game_session.dart';
 import 'package:pendulum_feeding_game/game/model/setup_rules.dart';
 import 'package:pendulum_feeding_game/math/vec2.dart';
+
+import 'audio/fake_sound_backend.dart';
 
 /// Flame mounts components in order, so the input layer is mounted only
 /// after the sprites before it. Image decoding needs real async time, and
@@ -112,6 +115,61 @@ void main() {
       expect(find.text('TAP TO START'), findsOneWidget);
     },
   );
+
+  testWidgets('the whistle and the applause sound, and the applause is cut '
+      'off by leaving the result', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final backend = FakeSoundBackend();
+    final sound = SoundController(backend)..setEnabled(true);
+    await tester.pumpWidget(PendulumFeedingApp(sound: sound));
+    Future<void> runSeconds(int seconds) async {
+      for (var i = 0; i < seconds * 60; i++) {
+        await tester.pump(const Duration(microseconds: 16667));
+      }
+    }
+
+    List<Object> sounds() => [
+      for (final call in backend.calls)
+        if (call is Sfx || (call is String && call.startsWith('stop'))) call,
+    ];
+
+    await tester.tap(find.text('TAP TO START'));
+    await runSeconds(6);
+    await tester.tap(find.text('スタート'));
+    await runSeconds(2);
+    expect(sounds(), isEmpty); // Still counting down.
+    await runSeconds(1);
+    expect(find.text('START'), findsOneWidget);
+    expect(sounds(), [Sfx.whistle]);
+
+    await runSeconds(23);
+    expect(find.text('もう一度'), findsOneWidget);
+    expect(sounds(), [Sfx.whistle, Sfx.claps]);
+
+    // もう一度 cuts the applause off, and the next game plays on.
+    await tester.tap(find.text('もう一度'));
+    await runSeconds(1);
+    expect(sounds(), [Sfx.whistle, Sfx.claps, 'stop claps']);
+    await tester.tap(find.text('スタート'));
+    await runSeconds(26);
+    expect(find.text('もう一度'), findsOneWidget);
+    expect(sounds(), [
+      Sfx.whistle,
+      Sfx.claps,
+      'stop claps',
+      Sfx.whistle,
+      Sfx.claps,
+    ]);
+
+    // So does タイトルへ.
+    await tester.tap(find.text('タイトルへ'));
+    await runSeconds(1);
+    expect(find.text('TAP TO START'), findsOneWidget);
+    expect(sounds().last, 'stop claps');
+  });
 
   testWidgets('setup drag reaches the game through the scaled stage', (
     tester,

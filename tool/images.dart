@@ -22,8 +22,16 @@
 /// groom, pivot) keep their transparent margins, so that the anchors still
 /// fit.
 ///
-/// The background is not made here: at 1376x636 it is not much larger than
-/// the screen.
+/// The background (art/background/) is not scaled: at 1376x636 it is not much
+/// larger than the screen. It is only converted.
+///
+/// The output is WebP, which is a fraction of the size of the PNG for the
+/// download, and looks the same at [_webpQuality]. The originals in art/ stay
+/// PNG; make the images from them here, never from an earlier output, so that
+/// the lossy compression is applied only once.
+///
+/// Needs `cwebp` (libwebp) on the PATH, e.g. `sudo apt install webp` or
+/// `brew install webp`; or set the `CWEBP` environment variable to its path.
 library;
 
 import 'dart:io';
@@ -36,6 +44,10 @@ const _visualSize = 58.0;
 
 /// Must equal GameAssets.foodImageDensity.
 const _density = 4;
+
+/// The WebP quality, 0 to 100, and that of the transparency (kept exact).
+const _webpQuality = 95;
+const _webpAlphaQuality = 100;
 
 /// Pixels at least this opaque count as visible area.
 const _visibleAlpha = 0.5;
@@ -57,6 +69,10 @@ const _sprites = {
   'pendulum/pivot.png': (width: 18 * 1.8, trim: false),
 };
 
+/// The directories of art/ that [_otherSprites] leaves alone: the foods and
+/// the background have their own steps.
+const _madeElsewhere = {'food', 'background'};
+
 /// Makes every image in assets/images/ from art/. Run from the project
 /// root.
 void main() {
@@ -66,6 +82,7 @@ void main() {
   }
   _foods();
   _otherSprites();
+  _background();
 }
 
 /// Makes the food images, sized to look alike, and prints their sizes.
@@ -80,19 +97,15 @@ void _foods() {
     final displayScale = _visualSize / math.sqrt(diameter * longSide);
 
     final resized = _resize(image, displayScale * _density);
-    final bytes = img.encodePng(
-      resized.convert(format: img.Format.uint8),
-      level: 9,
-    );
-    File('${output.path}/$name').writeAsBytesSync(bytes);
+    final bytes = _writeWebp(resized, '${output.path}/${_webpName(name)}');
 
     final display =
         '${(resized.width / _density).toStringAsFixed(0)}x'
         '${(resized.height / _density).toStringAsFixed(0)}';
     stdout.writeln(
-      '${name.padRight(21)}${display.padRight(11)}'
+      '${_webpName(name).padRight(21)}${display.padRight(11)}'
       '${(diameter * displayScale).toStringAsFixed(1).padRight(9)}'
-      '${bytes.length}',
+      '$bytes',
     );
   }
 }
@@ -103,7 +116,8 @@ void _otherSprites() {
   stdout.writeln('\nimage                     display    bytes');
   final sources = [
     for (final dir in Directory('art').listSync().whereType<Directory>())
-      if (dir.uri.pathSegments.reversed.elementAt(1) != 'food') ..._pngs(dir),
+      if (!_madeElsewhere.contains(dir.uri.pathSegments.reversed.elementAt(1)))
+        ..._pngs(dir),
   ];
   for (final source in sources) {
     final path = source.path.substring('art/'.length);
@@ -114,20 +128,61 @@ void _otherSprites() {
     }
     final image = _load(source, trim: sprite.trim);
     final resized = _resize(image, sprite.width * _density / image.width);
-    final bytes = img.encodePng(
-      resized.convert(format: img.Format.uint8),
-      level: 9,
-    );
-    File('assets/images/$path')
-      ..parent.createSync(recursive: true)
-      ..writeAsBytesSync(bytes);
+    final bytes = _writeWebp(resized, 'assets/images/${_webpName(path)}');
     final display =
         '${(resized.width / _density).toStringAsFixed(0)}x'
         '${(resized.height / _density).toStringAsFixed(0)}';
     stdout.writeln(
-      '${path.padRight(26)}${display.padRight(11)}${bytes.length}',
+      '${_webpName(path).padRight(26)}${display.padRight(11)}$bytes',
     );
   }
+}
+
+/// Converts the background, as it is, and prints its size.
+void _background() {
+  final source = File('art/background/background.png');
+  final image = _load(source, trim: false);
+  final output = Directory('assets/images/background')
+    ..createSync(recursive: true);
+  final bytes = _writeWebp(image, '${output.path}/background.webp');
+  stdout.writeln(
+    '\nbackground.webp  ${image.width}x${image.height}  $bytes bytes',
+  );
+}
+
+/// Returns [path] with its extension changed to `.webp`.
+String _webpName(String path) => path.replaceFirst(RegExp(r'\.png$'), '.webp');
+
+/// Writes [image] to [path] as WebP, with cwebp, and returns the size of the
+/// file. Exits with an error if cwebp is missing or fails.
+int _writeWebp(img.Image image, String path) {
+  final temp = File(
+    '${Directory.systemTemp.path}/images_tool_${pid}_source.png',
+  )..writeAsBytesSync(img.encodePng(image.convert(format: img.Format.uint8)));
+  final cwebp = Platform.environment['CWEBP'] ?? 'cwebp';
+  try {
+    final result = Process.runSync(cwebp, [
+      '-quiet',
+      '-q', '$_webpQuality',
+      '-alpha_q', '$_webpAlphaQuality',
+      '-m', '6', // The slowest, smallest encoding.
+      temp.path,
+      '-o', path,
+    ]);
+    if (result.exitCode != 0) {
+      stderr.writeln('cwebp failed on $path:\n${result.stderr}');
+      exit(1);
+    }
+  } on ProcessException {
+    stderr.writeln(
+      'cwebp not found. Install it (sudo apt install webp, brew install '
+      'webp), or set CWEBP to its path.',
+    );
+    exit(1);
+  } finally {
+    if (temp.existsSync()) temp.deleteSync();
+  }
+  return File(path).lengthSync();
 }
 
 /// Returns the PNG files directly in [dir], sorted by path.

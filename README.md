@@ -38,6 +38,8 @@
 - 必要に応じて:
   - Firestore のルールのテスト: Node.js と Java（[firebase.md](docs/firebase.md#セキュリティルールのテストと反映)）
   - プレイヤー ID の登録など: Firebase のサービスアカウントの鍵（[firebase.md](docs/firebase.md#管理ツール)）
+  - 画像の作成（`dart run tool/images.dart`）: cwebp（[assets.md](docs/assets.md#画像の作り方)）
+  - フォントの作成（`dart run tool/fonts.dart`）: fonttools の pyftsubset（[assets.md](docs/assets.md#フォントの作り方)）
   - 音声の作成（`dart run tool/audio.dart`）: ffmpeg（[assets.md](docs/assets.md#音声)）
 
 ### 起動
@@ -75,7 +77,7 @@ GitHub Pages への公開は CI が行う（[deployment.md](docs/deployment.md)�
 | バックエンド | Firebase（Cloud Firestore、セキュリティルール）、crypto（自己ベストのキーの SHA-256） |
 | 端末への保存 | shared_preferences |
 | 公開 | GitHub Pages、GitHub Actions |
-| 開発用 | ffmpeg（音声の軽量化）、fake_cloud_firestore（テスト）、Firebase エミュレータ（ルールのテスト）、image（画像の縮小）、qr・googleapis_auth（プレイヤー ID の管理ツール） |
+| 開発用 | ffmpeg（音声の軽量化）、cwebp（画像を WebP にする）、fonttools（フォントを絞る）、fake_cloud_firestore（テスト）、Firebase エミュレータ（ルールのテスト）、image（画像の縮小）、qr・googleapis_auth（プレイヤー ID の管理ツール） |
 
 ## Credits
 

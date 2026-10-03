@@ -125,14 +125,22 @@ class PendulumFeedingGame extends FlameGame {
   }
 
   /// Copies the session's phase and countdown to the overlays' notifiers.
+  ///
+  /// The applause is played here, as the result comes up: that is after the
+  /// last score effect, not when the game finishes ([GameFinished]).
   void _publish() {
     final holdResult = session.isFinished && _resultDelay > 0;
-    phase.value = holdResult ? GamePhase.playing : session.phase;
+    final shown = holdResult ? GamePhase.playing : session.phase;
+    if (shown == GamePhase.finished && phase.value != GamePhase.finished) {
+      sound?.playSfx(Sfx.claps);
+    }
+    phase.value = shown;
     countdownNumber.value = session.countdownNumber;
   }
 
   /// Plays the effect for [event]: score hearts and the eating sound, the
-  /// groom's throw and its sound, or the end of the game.
+  /// groom's throw and its sound, the whistle at the start, or the end of the
+  /// game.
   void _handleEvent(GameEvent event) {
     switch (event) {
       case FoodEaten(:final mouthPosition, :final points, :final combo):
@@ -148,6 +156,8 @@ class PendulumFeedingGame extends FlameGame {
       case FoodLaunched():
         _groom.playThrow();
         sound?.playSfx(Sfx.throwFood);
+      case StartCueShown():
+        sound?.playSfx(Sfx.whistle);
       case GameFinished(:final score):
         // Events arrive in order, so a food eaten on the final step has
         // already started its effect.

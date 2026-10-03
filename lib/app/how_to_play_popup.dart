@@ -152,7 +152,7 @@ class _HowToPlayPopupState extends State<HowToPlayPopup> {
   /// Page 3/3: the credits and the note on the play results, with ◀ to the
   /// tips, near where ▶ is on the other pages.
   List<Widget> _creditsPage() => [
-    const Positioned(left: 30, top: 78, child: CreditsTable()),
+    const Positioned(left: 30, top: 70, child: CreditsTable()),
     // At the height of the tips page's closing text, on one line, short of
     // ◀.
     _lead(top: 269, width: 400, HowToPlayPopup.recordNote),

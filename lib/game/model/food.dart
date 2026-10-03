@@ -4,7 +4,7 @@ library;
 import '../../math/vec2.dart';
 
 /// A kind of food. All kinds share one hit radius (`GameConfig.foodHitRadius`);
-/// the image of each is `assets/images/food/<id>.png`.
+/// the image of each is `assets/images/food/<id>.webp`.
 class FoodType {
   const FoodType({required this.id, required this.points});
 

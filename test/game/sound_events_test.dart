@@ -52,6 +52,42 @@ const _hanging = PendulumState(
   return (game: game, backend: backend);
 }
 
+/// A game with sound on over a still pendulum that is over after
+/// [timeLimitSeconds] of play, with no countdown. The food hangs [drop] px
+/// above the bride's mouth, so that a throw straight down is eaten after
+/// falling that far.
+({PendulumFeedingGame game, FakeSoundBackend backend}) _timed({
+  required int timeLimitSeconds,
+  double drop = 80,
+}) {
+  final mouth = GameSession(
+    config: const GameConfig(
+      pendulumInitialState: _hanging,
+      startEnergyTopMultiple: 0,
+    ),
+  ).mouthPosition;
+  final backend = FakeSoundBackend();
+  final game = PendulumFeedingGame(
+    session: GameSession(
+      config: GameConfig(
+        pendulumInitialState: _hanging,
+        startEnergyTopMultiple: 0,
+        countdownSeconds: 0,
+        startCueSeconds: 0,
+        timeLimitSeconds: timeLimitSeconds,
+        foodSpawnPosition: mouth - Vec2(0, drop),
+        foodTypes: const [FoodType(id: 'test', points: 100)],
+        foodHitRadius: 10,
+      ),
+      random: math.Random(1),
+    ),
+    sound: SoundController(backend)..setEnabled(true),
+  )..startCountdown();
+  game.update(_frame);
+  expect(game.session.phase, GamePhase.playing);
+  return (game: game, backend: backend);
+}
+
 /// Throws the food with [velocity] [px/s], and runs frames until [done].
 void _throwAndRun(
   PendulumFeedingGame game,
@@ -133,5 +169,96 @@ void main() {
     final silent = PendulumFeedingGame(session: GameSession())
       ..startCountdown();
     expect(() => silent.update(_frame), returnsNormally);
+  });
+
+  test('the whistle sounds once, as START appears', () {
+    final backend = FakeSoundBackend();
+    final game = PendulumFeedingGame(
+      session: GameSession(
+        config: const GameConfig(
+          pendulumInitialState: _hanging,
+          startEnergyTopMultiple: 0,
+        ),
+      ),
+      sound: SoundController(backend)..setEnabled(true),
+    )..startCountdown();
+
+    // Silent through 3, 2 and 1.
+    while (game.countdownNumber.value != 0) {
+      expect(backend.effects, isEmpty);
+      game.update(_frame);
+    }
+    // Sounded in the very frame START is shown.
+    expect(game.phase.value, GamePhase.countdown);
+    expect(backend.effects, [Sfx.whistle]);
+
+    // And not again while START shows, or when play begins.
+    while (game.phase.value == GamePhase.countdown) {
+      game.update(_frame);
+    }
+    expect(game.phase.value, GamePhase.playing);
+    expect(backend.effects, [Sfx.whistle]);
+  });
+
+  test('a game without a countdown, like the how-to-play demo, is silent', () {
+    final (:game, :backend) = _playing();
+    for (var i = 0; i < 30; i++) {
+      game.update(_frame);
+    }
+    expect(backend.effects, isEmpty);
+  });
+
+  test('the applause sounds once, as the result comes up', () {
+    final (:game, :backend) = _timed(timeLimitSeconds: 1);
+    while (game.phase.value == GamePhase.playing) {
+      expect(backend.effects, isEmpty);
+      game.update(_frame);
+    }
+    expect(game.phase.value, GamePhase.finished);
+    expect(backend.effects, [Sfx.claps]);
+
+    // Not again while the result stays.
+    for (var i = 0; i < 30; i++) {
+      game.update(_frame);
+    }
+    expect(backend.effects, [Sfx.claps]);
+  });
+
+  test('after a buzzer beater the applause waits for the result', () {
+    // The food is thrown 10 steps before time is up and lands after it.
+    final (:game, :backend) = _timed(timeLimitSeconds: 1, drop: 150);
+    for (var i = 0; i < 20; i++) {
+      game.update(_frame);
+    }
+    const start = Vec2(400, 200);
+    game.session
+      ..beginAim(start)
+      ..updateAim(
+        start - const Vec2(0, 300) * (1 / game.session.config.launchScale),
+      )
+      ..releaseAim();
+
+    while (!game.session.isFinished) {
+      game.update(_frame);
+    }
+    // The game is over and the last food scored, but the result is held back
+    // for the score effect: no applause yet.
+    expect(game.session.score, 100);
+    expect(game.phase.value, GamePhase.playing);
+    expect(backend.effects, [Sfx.throwFood, Sfx.eat]);
+
+    while (game.phase.value != GamePhase.finished) {
+      game.update(_frame);
+    }
+    expect(backend.effects, [Sfx.throwFood, Sfx.eat, Sfx.claps]);
+  });
+
+  test('with sound off the whistle and the applause are silent', () {
+    final (:game, :backend) = _timed(timeLimitSeconds: 1);
+    game.sound!.setEnabled(false);
+    while (game.phase.value == GamePhase.playing) {
+      game.update(_frame);
+    }
+    expect(backend.effects, isEmpty);
   });
 }

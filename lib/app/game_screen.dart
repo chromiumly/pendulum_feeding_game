@@ -4,6 +4,7 @@ library;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../audio/sound_controller.dart';
 import '../game/flame/pendulum_feeding_game.dart';
 import '../game/model/game_session.dart';
 import '../physics/double_pendulum.dart';
@@ -80,6 +81,7 @@ class _GameScreenState extends State<GameScreen> {
   /// with the pendulum placed as last time. An abandoned game is not
   /// recorded.
   void _retry() {
+    _stopApplause();
     setState(() {
       _game = _newGame(_game.session.placedPendulum);
       _ranking.value = const RankingPending();
@@ -92,8 +94,13 @@ class _GameScreenState extends State<GameScreen> {
     super.dispose();
   }
 
+  /// Cuts off the applause of the result, which is still sounding if the
+  /// player leaves it at once.
+  void _stopApplause() => SoundScope.maybeOf(context)?.stopSfx(Sfx.claps);
+
   /// Leaves for the title screen.
   void _goToTitle() {
+    _stopApplause();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => TitleScreen(ranking: widget.ranking),

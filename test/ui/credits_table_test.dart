@@ -16,9 +16,12 @@ TextStyle _styleOf(WidgetTester tester, String text) =>
     tester.widget<OutlinedText>(find.widgetWithText(OutlinedText, text)).style;
 
 void main() {
-  test('the credits are the maker, then where the assets come from', () {
+  test('the credits are the maker and the one who watched over, then where the assets come from', () {
     expect(creditGroups, [
-      [(label: '制作', value: 'Jumpei Kurokawa')],
+      [
+        (label: '制作', value: 'Jumpei Kurokawa'),
+        (label: '見守り', value: 'Yuria Otsuka'),
+      ],
       [
         (label: '効果音', value: 'OtoLogic（https://otologic.jp/）'),
         (label: 'BGM', value: 'Google Flow Music'),
@@ -33,7 +36,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_table());
     final lines = [for (final group in creditGroups) ...group];
-    expect(lines, hasLength(5));
+    expect(lines, hasLength(6));
 
     final labelLefts = <double>{};
     final valueLefts = <double>{};
@@ -57,9 +60,10 @@ void main() {
       for (final group in creditGroups)
         for (final line in group) tester.getTopLeft(find.text(line.label)).dy,
     ];
-    // Maker | source, source, source, source.
+    // Maker, watcher | source, source, source, source.
     final steps = [for (var i = 1; i < tops.length; i++) tops[i] - tops[i - 1]];
     expect(steps, [
+      CreditsTable.rowHeight,
       CreditsTable.rowHeight + CreditsTable.groupGap,
       CreditsTable.rowHeight,
       CreditsTable.rowHeight,

@@ -11,7 +11,13 @@ enum Sfx {
   throwFood('sfx/throw.mp3'),
 
   /// The bride eats a food.
-  eat('sfx/eat.mp3');
+  eat('sfx/eat.mp3'),
+
+  /// "START" is shown, and play begins.
+  whistle('sfx/whistle.mp3'),
+
+  /// The result is shown.
+  claps('sfx/claps.mp3');
 
   const Sfx(this.file);
 
@@ -32,6 +38,9 @@ abstract interface class SoundBackend {
 
   /// Plays [sfx] once, over anything already playing.
   Future<void> playSfx(Sfx sfx);
+
+  /// Cuts off every play of [sfx] that is still sounding, or about to.
+  Future<void> stopSfx(Sfx sfx);
 }
 
 /// Owns whether sound is on, and plays the music and effects while it is.
@@ -75,6 +84,12 @@ class SoundController extends ChangeNotifier {
   void playSfx(Sfx sfx) {
     if (!_enabled) return;
     unawaited(_quietly(() => _backend.playSfx(sfx)));
+  }
+
+  /// Cuts off [sfx] if it is sounding, e.g. the applause when the player
+  /// leaves the result. Works with sound on or off.
+  void stopSfx(Sfx sfx) {
+    unawaited(_quietly(() => _backend.stopSfx(sfx)));
   }
 
   /// Runs [action], ignoring any error it throws or completes with.

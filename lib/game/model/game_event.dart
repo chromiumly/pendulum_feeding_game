@@ -9,6 +9,12 @@ sealed class GameEvent {
   const GameEvent();
 }
 
+/// The countdown reached "START": the cue is shown, and play begins right
+/// after it. Not reported when a game has no countdown or no cue.
+class StartCueShown extends GameEvent {
+  const StartCueShown();
+}
+
 /// The player released a drag and the food was thrown.
 class FoodLaunched extends GameEvent {
   const FoodLaunched();

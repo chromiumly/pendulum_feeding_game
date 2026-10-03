@@ -62,7 +62,7 @@ class _TileButtonState extends State<TileButton> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x33000000),
+                  color: Color(0x80000000),
                   offset: Offset(0, 5),
                   blurRadius: 10,
                   spreadRadius: 5,

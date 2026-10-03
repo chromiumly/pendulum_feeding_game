@@ -355,6 +355,10 @@ class GameSession {
 
   void _stepCountdown() {
     _countdownElapsedSteps++;
+    if (config.startCueSteps > 0 &&
+        _countdownElapsedSteps == config.countdownSteps) {
+      _events.add(const StartCueShown());
+    }
     if (_countdownElapsedSteps >=
         config.countdownSteps + config.startCueSteps) {
       _phase = GamePhase.playing;
