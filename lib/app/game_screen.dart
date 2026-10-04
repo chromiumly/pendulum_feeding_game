@@ -61,20 +61,33 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Records a finished game. Only the current game's answer is shown; a
-  /// game left for a new one is still recorded.
+  /// game left for a new one is still recorded. A game that failed to record
+  /// but was recorded on a second try in the background shows its ranks
+  /// then, if its result is still up.
   Future<void> _record(PendulumFeedingGame game, int score) async {
     final ranking = widget.ranking;
     _ranking.value = ranking == null
         ? const RankingGuest()
         : const RankingPending();
     if (ranking == null) return;
+
+    void show(RankingStatus status) {
+      if (mounted && identical(game, _game)) _ranking.value = status;
+    }
+
+    // Kept, so that the failure, which may be reported after it, does not
+    // replace it.
+    RankingStatus? late;
     RankingStatus status;
     try {
-      status = await ranking.recordGame(score);
+      status = await ranking.recordGame(
+        score,
+        onLateResult: (status) => show(late = status),
+      );
     } on Object {
       status = const RankingFailed();
     }
-    if (mounted && identical(game, _game)) _ranking.value = status;
+    show(late ?? status);
   }
 
   /// もう一度, or giving up mid-game: a fresh session from the setup screen,

@@ -143,7 +143,7 @@ class _HowToPlayPopupState extends State<HowToPlayPopup> {
 
   /// Page 2/3: the tips, with ◀ to the controls beside ▶ to the credits.
   List<Widget> _tipsPage() => [
-    const Positioned(left: 30, top: 85, child: HowToPlayTips()),
+    const Positioned(left: 30, top: 80, child: HowToPlayTips()),
     _lead(top: 269, 'ハイスコアを目指して頑張ろう！\n何か良いことがあるかも...？'),
     _backButton(_Page.controls, left: _backBesideNextLeft),
     _nextButton(_Page.credits),

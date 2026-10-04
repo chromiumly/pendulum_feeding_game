@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,23 @@ import 'package:pendulum_feeding_game/ranking/ranking_repository.dart';
 
 // The fake does not enforce firestore.rules; those are tested on the
 // emulator in tool/firestore_rules.
+/// Firestore where a game being written lands through an earlier send, so
+/// that this write is refused as not new, as firestore.rules do.
+class _EarlierSendLands extends FakeFirebaseFirestore {
+  @override
+  Future<T> runTransaction<T>(
+    TransactionHandler<T> transactionHandler, {
+    Duration timeout = const Duration(seconds: 30),
+    int maxAttempts = 5,
+  }) async {
+    await super.runTransaction(transactionHandler);
+    throw FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+    );
+  }
+}
+
 void main() {
   late FakeFirebaseFirestore db;
   late FirestoreRankingRepository repository;
@@ -148,4 +166,43 @@ void main() {
     );
     expect((await db.collection('plays').get()).docs, isEmpty);
   });
+
+  test('a game refused because an earlier send of it landed meanwhile is '
+      'recorded, not rejected', () async {
+    final raced = _EarlierSendLands();
+    await raced.collection('players').doc('p1').set({});
+    final record = play('p1', 1500);
+
+    final result = await FirestoreRankingRepository(() async => raced)
+        .record(record);
+    expect(result.score, 1500);
+    expect(result.best, 1500);
+    expect(result.isNewBest, isTrue);
+    expect(result.gamesPlayed, 1);
+  });
+
+  test('a refused game that did not land is rejected', () async {
+    final refusing = _Refusing();
+    await refusing.collection('players').doc('p1').set({});
+    expect(
+      FirestoreRankingRepository(() async => refusing).record(play('p1', 1500)),
+      throwsA(isA<RecordRejectedException>()),
+    );
+  });
+}
+
+/// Firestore that refuses every write, as firestore.rules do for a made-up
+/// score.
+class _Refusing extends FakeFirebaseFirestore {
+  @override
+  Future<T> runTransaction<T>(
+    TransactionHandler<T> transactionHandler, {
+    Duration timeout = const Duration(seconds: 30),
+    int maxAttempts = 5,
+  }) async {
+    throw FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+    );
+  }
 }

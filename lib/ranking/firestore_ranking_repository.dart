@@ -43,16 +43,7 @@ class FirestoreRankingRepository implements RankingRepository {
     final bestRef = bests.doc(bestKey(record.playerId));
     final playerRef = db.collection('players').doc(record.playerId);
 
-    final ({int best, bool isNewBest, int gamesPlayed}) written;
-    try {
-      final recorded = await scores.doc(record.playId).get();
-      written = recorded.exists
-          ? await _recordedBefore(bestRef, playerRef, record)
-          : await _write(db, record, bestRef, playerRef);
-    } on FirebaseException catch (e) {
-      if (e.code == 'permission-denied') throw RecordRejectedException(e);
-      rethrow;
-    }
+    final written = await _writeOnce(db, record, bestRef, playerRef);
 
     final counts = await Future.wait([
       _count(scores.where('score', isGreaterThan: record.score)),
@@ -70,6 +61,29 @@ class FirestoreRankingRepository implements RankingRepository {
       playerCount: counts[3],
       gamesPlayed: written.gamesPlayed,
     );
+  }
+
+  /// Writes [record] if it is not recorded yet, and returns the player's
+  /// best and game count after it.
+  Future<({int best, bool isNewBest, int gamesPlayed})> _writeOnce(
+    FirebaseFirestore db,
+    PlayRecord record,
+    DocumentReference<Map<String, dynamic>> bestRef,
+    DocumentReference<Map<String, dynamic>> playerRef,
+  ) async {
+    final scoreRef = db.collection('scores').doc(record.playId);
+    try {
+      return (await scoreRef.get()).exists
+          ? await _recordedBefore(bestRef, playerRef, record)
+          : await _write(db, record, bestRef, playerRef);
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+      // An earlier send of this game, given up on when it took too long, may
+      // have landed in the meantime; firestore.rules then refuse this one as
+      // not new. It is recorded all the same.
+      if (!(await scoreRef.get()).exists) throw RecordRejectedException(e);
+      return _recordedBefore(bestRef, playerRef, record);
+    }
   }
 
   /// Records a new game: plays and scores, the player's game count, and
@@ -123,6 +137,13 @@ class FirestoreRankingRepository implements RankingRepository {
       isNewBest: data?['playId'] == record.playId,
       gamesPlayed: _gamesPlayed(player),
     );
+  }
+
+  @override
+  Future<void> reconnect() async {
+    final db = await _firestore();
+    await db.disableNetwork();
+    await db.enableNetwork();
   }
 
   /// Returns how many documents [query] matches, counted on the server.

@@ -10,8 +10,11 @@ import 'package:pendulum_feeding_game/game/flame/pendulum_feeding_game.dart';
 import 'package:pendulum_feeding_game/game/model/game_session.dart';
 import 'package:pendulum_feeding_game/game/model/setup_rules.dart';
 import 'package:pendulum_feeding_game/math/vec2.dart';
+import 'package:pendulum_feeding_game/ranking/ranking_service.dart';
+import 'package:pendulum_feeding_game/ranking/ranking_storage.dart';
 
 import 'audio/fake_sound_backend.dart';
+import 'ranking/ranking_service_test.dart' show FakeRankingRepository;
 
 /// Flame mounts components in order, so the input layer is mounted only
 /// after the sprites before it. Image decoding needs real async time, and
@@ -169,6 +172,41 @@ void main() {
     await runSeconds(1);
     expect(find.text('TAP TO START'), findsOneWidget);
     expect(sounds().last, 'stop claps');
+  });
+
+  testWidgets('a game that fails on a stuck connection shows its ranks once '
+      'it is sent again', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final repository = FakeRankingRepository();
+    final ranking = RankingService(
+      repository: repository,
+      storage: MemoryRankingStorage(),
+      launchUri: Uri.parse('https://example.com/?id=k7q2xm9pa4c8r3tw'),
+    );
+    await tester.pumpWidget(PendulumFeedingApp(ranking: ranking));
+    Future<void> runSeconds(int seconds) async {
+      for (var i = 0; i < seconds * 60; i++) {
+        await tester.pump(const Duration(microseconds: 16667));
+      }
+    }
+
+    await tester.tap(find.text('TAP TO START'));
+    await runSeconds(2);
+    // The connection gets stuck during the game.
+    repository.stuck = true;
+    await tester.tap(find.text('スタート'));
+    await runSeconds(26);
+    expect(find.text('今回のスコア'), findsOneWidget);
+    await tester.runAsync(() => ranking.recovered);
+    await tester.pump();
+
+    expect(repository.reconnects, 1);
+    expect(repository.recorded, hasLength(1));
+    expect(find.text(ResultPopup.failedNote), findsNothing);
+    expect(find.textContaining('全試行中 1位'), findsOneWidget);
   });
 
   testWidgets('setup drag reaches the game through the scaled stage', (

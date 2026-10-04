@@ -4,6 +4,8 @@ library;
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+
 import 'player_id.dart';
 import 'ranking_models.dart';
 import 'ranking_repository.dart';
@@ -15,6 +17,10 @@ import 'ranking_storage.dart';
 /// Without a registered ID the player is a guest, and nothing is recorded.
 /// Every game of a player is kept on the device until it has been recorded,
 /// and sent again later if recording fails.
+///
+/// When recording fails other than by being refused, the connection may be
+/// stuck rather than the network down: it is then made anew, and the games
+/// kept on the device are sent again at once, in the background.
 class RankingService {
   /// [repository] records and ranks games; [storage] keeps them on the
   /// device until then. [launchUri] is the URL the app was opened with,
@@ -43,6 +49,13 @@ class RankingService {
   /// the device until they are recorded.
   int _recordedGames = 0;
   int _pendingGames = 0;
+
+  /// Who to tell when a game that failed to record is recorded later, by
+  /// its play ID.
+  final _lateResults = <String, void Function(RankingStatus status)>{};
+
+  /// The reconnection and resending after a failure, while it runs.
+  Future<void>? _recovering;
 
   /// Storage operations run one at a time, so that a game is never sent
   /// twice at once.
@@ -91,7 +104,13 @@ class RankingService {
   }
 
   /// Records a finished game with [score] and returns what to show.
-  Future<RankingStatus> recordGame(int score) async {
+  ///
+  /// If it fails, it is tried again in the background; should that succeed,
+  /// [onLateResult] is called with the ranks to show instead.
+  Future<RankingStatus> recordGame(
+    int score, {
+    void Function(RankingStatus status)? onLateResult,
+  }) async {
     // Counted at once, so that the next game, which may start before this
     // one is saved, already draws with it.
     if (hasPlayer) _pendingGames++;
@@ -119,10 +138,32 @@ class RankingService {
             ? const RankingFailed()
             : const RankingGuest();
       } on Object {
+        if (onLateResult != null) _lateResults[record.playId] = onLateResult;
+        _recoverLater();
         return const RankingFailed();
       }
     });
   }
+
+  /// Makes the connection anew and sends the kept games again, in the
+  /// background; once at a time.
+  void _recoverLater() {
+    _recovering ??= _recover().whenComplete(() => _recovering = null);
+  }
+
+  Future<void> _recover() async {
+    try {
+      await _repository.reconnect().timeout(timeout);
+    } on Object {
+      // Sent all the same: the connection may be fine after all.
+    }
+    await _serialized(_sendPending);
+  }
+
+  /// Completes when the reconnection and resending after a failure, if any,
+  /// has finished.
+  @visibleForTesting
+  Future<void> get recovered => _recovering ?? Future.value();
 
   /// Sends the games kept on the device, oldest first, until one fails.
   Future<void> _sendPending({String? except}) async {
@@ -133,7 +174,9 @@ class RankingService {
         if (record.playerId == _playerId) {
           await _setRecordedGames(result.gamesPlayed);
         }
+        _lateResults.remove(record.playId)?.call(RankingRecorded(result));
       } on RecordRejectedException {
+        _lateResults.remove(record.playId);
         // Refused for good (e.g. an unregistered ID); sending it again
         // would not help.
       } on Object {

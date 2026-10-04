@@ -15,6 +15,12 @@ abstract interface class RankingRepository {
   /// Throws [RecordRejectedException] when the storage refuses the record
   /// for good (e.g. an unregistered ID); other errors may pass on a retry.
   Future<RankingResult> record(PlayRecord record);
+
+  /// Drops the connection to the storage and makes a new one, for when it
+  /// has stopped answering. A connection can get stuck that way (seen on an
+  /// iPhone's Safari), and then every call fails until the page is
+  /// reloaded.
+  Future<void> reconnect();
 }
 
 /// The storage refused a record; sending it again would not help.

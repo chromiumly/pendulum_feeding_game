@@ -15,19 +15,26 @@ class FakeRankingRepository implements RankingRepository {
   final earlierGames = <String, int>{};
   bool offline = false;
 
+  /// Fails every call like [offline], until [reconnect] makes it work.
+  bool stuck = false;
+
+  /// How often [reconnect] was called, and whether it fails.
+  int reconnects = 0;
+  bool reconnectFails = false;
+
   int _games(String playerId) =>
       (earlierGames[playerId] ?? 0) +
       recorded.values.where((r) => r.playerId == playerId).length;
 
   @override
   Future<int?> recordedGames(String playerId) async {
-    if (offline) throw Exception('offline');
+    if (offline || stuck) throw Exception('offline');
     return registered.contains(playerId) ? _games(playerId) : null;
   }
 
   @override
   Future<RankingResult> record(PlayRecord record) async {
-    if (offline) throw Exception('offline');
+    if (offline || stuck) throw Exception('offline');
     if (!registered.contains(record.playerId)) {
       throw const RecordRejectedException();
     }
@@ -42,6 +49,13 @@ class FakeRankingRepository implements RankingRepository {
       playerCount: 1,
       gamesPlayed: _games(record.playerId),
     );
+  }
+
+  @override
+  Future<void> reconnect() async {
+    reconnects++;
+    if (reconnectFails) throw Exception('cannot reconnect');
+    stuck = false;
   }
 }
 
@@ -235,6 +249,91 @@ void main() {
       final ranking = service();
       await ranking.start();
       expect(ranking.gamesPlayed, 0);
+    });
+  });
+
+  group('after a failure', () {
+    test('a stuck connection is made anew, and the game is sent again at '
+        'once, its ranks reported late', () async {
+      final ranking = service();
+      await ranking.start();
+      repository.stuck = true;
+      final late = <RankingStatus>[];
+
+      expect(
+        await ranking.recordGame(700, onLateResult: late.add),
+        isA<RankingFailed>(),
+      );
+      await ranking.recovered;
+
+      expect(repository.reconnects, 1);
+      expect(repository.recorded.values.single.score, 700);
+      expect(storage.pending, isEmpty);
+      expect(late, [isA<RankingRecorded>()]);
+      expect((late.single as RankingRecorded).result.score, 700);
+      expect(ranking.gamesPlayed, 1);
+    });
+
+    test('with the network down the game stays kept, and is sent with the '
+        'next one', () async {
+      final ranking = service();
+      await ranking.start();
+      repository.offline = true;
+      final late = <RankingStatus>[];
+
+      expect(
+        await ranking.recordGame(700, onLateResult: late.add),
+        isA<RankingFailed>(),
+      );
+      await ranking.recovered;
+      expect(repository.reconnects, 1);
+      expect(storage.pending.single.score, 700);
+      expect(late, isEmpty);
+
+      repository.offline = false;
+      expect(await ranking.recordGame(900), isA<RankingRecorded>());
+      expect(
+        repository.recorded.values.map((r) => r.score),
+        unorderedEquals([700, 900]),
+      );
+      // Its result came at last, for whoever still shows that game.
+      expect(late, [isA<RankingRecorded>()]);
+    });
+
+    test('a failed reconnect still sends the games again', () async {
+      final ranking = service();
+      await ranking.start();
+      repository.offline = true;
+      repository.reconnectFails = true;
+      final status = ranking.recordGame(700);
+      // The network comes back while the game is failing.
+      expect(await status, isA<RankingFailed>());
+      repository.offline = false;
+      await ranking.recovered;
+      expect(repository.recorded.values.single.score, 700);
+      expect(storage.pending, isEmpty);
+    });
+
+    test('a refused game is not a stuck connection: no reconnect', () async {
+      final ranking = service();
+      await ranking.start();
+      repository.registered.clear();
+      expect(await ranking.recordGame(700), isA<RankingGuest>());
+      await ranking.recovered;
+      expect(repository.reconnects, 0);
+    });
+
+    test('a game recorded at once reports no late result', () async {
+      final ranking = service();
+      await ranking.start();
+      final late = <RankingStatus>[];
+      expect(
+        await ranking.recordGame(700, onLateResult: late.add),
+        isA<RankingRecorded>(),
+      );
+      await ranking.recovered;
+      expect(late, isEmpty);
+      expect(repository.reconnects, 0);
     });
   });
 }
