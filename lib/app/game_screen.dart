@@ -14,6 +14,7 @@ import '../ui/assets.dart';
 import '../ui/widgets/stage.dart';
 import '../ui/widgets/tile_button.dart';
 import 'countdown_overlay.dart';
+import 'landscape_guard.dart';
 import 'play_bonus_gauge.dart';
 import 'result_popup.dart';
 import 'setup_overlay.dart';
@@ -56,7 +57,7 @@ class _GameScreenState extends State<GameScreen> {
       ),
       onGameFinished: (score) => _record(game, score),
       sound: SoundScope.maybeOf(context),
-    );
+    )..portrait = _isPortrait;
     return game;
   }
 
@@ -99,6 +100,17 @@ class _GameScreenState extends State<GameScreen> {
       _game = _newGame(_game.session.placedPendulum);
       _ranking.value = const RankingPending();
     });
+  }
+
+  /// Whether the screen is in portrait, where the game holds still under
+  /// the prompt to rotate the device.
+  bool get _isPortrait => LandscapeGuard.isPortrait(MediaQuery.sizeOf(context));
+
+  /// Holds the game still while in portrait; picked up again on rotating.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _game.portrait = _isPortrait;
   }
 
   @override

@@ -4,21 +4,24 @@ library;
 import 'package:flutter/material.dart';
 
 /// The game is landscape-only. In portrait, ask the player to rotate the
-/// device instead of showing a tiny letterboxed game.
+/// device instead of showing a tiny letterboxed game. The game itself holds
+/// still meanwhile (`GameScreen` tells it, with [isPortrait]).
 class LandscapeGuard extends StatelessWidget {
   const LandscapeGuard({super.key, required this.child});
 
   /// The app, shown underneath in any orientation.
   final Widget child;
 
+  /// Whether a screen of [size] is in portrait.
+  static bool isPortrait(Size size) => size.height > size.width;
+
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final isPortrait = size.height > size.width;
+    final portrait = isPortrait(MediaQuery.sizeOf(context));
     return Stack(
       children: [
         child,
-        if (isPortrait)
+        if (portrait)
           const Positioned.fill(
             child: ColoredBox(
               color: Colors.black87,

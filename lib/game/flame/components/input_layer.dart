@@ -13,17 +13,23 @@ import '../../model/game_session.dart';
 /// Playing: a drag may start anywhere; pulling back and releasing throws the
 /// food.
 class InputLayer extends PositionComponent with DragCallbacks {
-  InputLayer(this.session)
-    : super(
+  /// [isActive] says whether input is taken; a held game takes none.
+  InputLayer(this.session, {bool Function()? isActive})
+    : _isActive = isActive ?? _always,
+      super(
         size: Vector2(session.config.worldSize.x, session.config.worldSize.y),
       );
 
   final GameSession session;
+  final bool Function() _isActive;
+
+  static bool _always() => true;
 
   /// Grabs a handle on the setup screen, or starts aiming while playing.
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
+    if (!_isActive()) return;
     final point = _vec(event.localPosition);
     switch (session.phase) {
       case GamePhase.setup:

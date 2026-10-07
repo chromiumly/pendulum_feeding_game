@@ -41,6 +41,8 @@
 
 コンポーネント（`lib/game/flame/components/`）は、セッションの状態を描くだけで、ゲームの状態を自分では持たない。入力は `InputLayer` がドラッグを受けてセッションへ渡す。
 
+- **一時停止**: `PendulumFeedingGame` は、縦向きのとき（`portrait`、`GameScreen` が画面の大きさから設定する）と、アプリが前面にないとき（`lifecycleStateChange` で `resumed` 以外）に、`update` で何もしない（`isSuspended`）。ゲームの時間はすべて `update` から進むので、これで全部止まる。Flame 自身もバックグラウンドではエンジンを止めるが、前面に戻ると縦向きのままでも再開してしまうので、理由ごとの旗で、別に持っている。止まった瞬間に、ドラッグ中の狙いと位置決めを取り消す。
+
 ## Flutter の画面
 
 - 画面はすべて 844×390 の固定座標で組み、`StageViewport` が画面に合わせて拡大縮小する（`lib/ui/widgets/stage.dart`）。Figma の座標をそのまま使え、Flame のワールドとも一致する。

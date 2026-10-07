@@ -209,6 +209,46 @@ void main() {
     expect(find.textContaining('全試行中 1位'), findsOneWidget);
   });
 
+  testWidgets('turning the phone to portrait mid-game holds it still under '
+      'the rotate prompt; back to landscape, it carries on', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    Future<void> runSeconds(int seconds) async {
+      for (var i = 0; i < seconds * 60; i++) {
+        await tester.pump(const Duration(microseconds: 16667));
+      }
+    }
+
+    PendulumFeedingGame game() => tester
+        .widget<GameWidget<PendulumFeedingGame>>(
+          find.byType(GameWidget<PendulumFeedingGame>),
+        )
+        .game!;
+
+    await tester.tap(find.text('TAP TO START'));
+    await runSeconds(1);
+    await tester.tap(find.text('スタート'));
+    await runSeconds(6);
+    expect(game().session.phase, GamePhase.playing);
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pump();
+    expect(find.text('端末を横向きにしてください'), findsOneWidget);
+    expect(game().isSuspended, isTrue);
+    final held = game().session.remainingSeconds;
+    await runSeconds(3);
+    expect(game().session.remainingSeconds, held);
+
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pump();
+    expect(find.text('端末を横向きにしてください'), findsNothing);
+    await runSeconds(2);
+    expect(game().session.remainingSeconds, lessThan(held - 1.5));
+  });
+
   testWidgets('setup drag reaches the game through the scaled stage', (
     tester,
   ) async {

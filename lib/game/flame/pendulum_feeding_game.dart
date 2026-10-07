@@ -24,6 +24,12 @@ import 'stage_style.dart';
 /// Responsibilities: drive the session in fixed steps, forward input, render
 /// its state, turn session events into effects, and publish the phase for the
 /// Flutter overlays.
+///
+/// It holds still while the screen is in portrait (see [portrait]) or the
+/// app is not in front (anything but [AppLifecycleState.resumed]), and
+/// carries on from where it was as soon as neither holds. Flame pauses the
+/// engine in the background too, but its own resume would also start a game
+/// that is still in portrait.
 class PendulumFeedingGame extends FlameGame {
   /// [session] is the game to host; its config sets the world size.
   /// [onGameFinished] is called with the final score once it ends.
@@ -74,6 +80,37 @@ class PendulumFeedingGame extends FlameGame {
   /// Time until the result may be shown, once the game has finished [s].
   double _resultDelay = 0;
 
+  /// Whether the screen is in portrait, where the game is covered by the
+  /// prompt to rotate the device: set by the screen that shows it.
+  bool get portrait => _portrait;
+  set portrait(bool value) => _holdIf(() => _portrait = value);
+  bool _portrait = false;
+
+  /// Whether the app is not in front (in the background, or another thing
+  /// such as the notification centre has the focus).
+  bool _inBackground = false;
+
+  /// Whether the game is held still: nothing moves, the clock included.
+  bool get isSuspended => _portrait || _inBackground;
+
+  /// Runs [change] to the reasons for holding still. A drag under way when
+  /// the game stops is dropped: its finger may never come back up here.
+  void _holdIf(void Function() change) {
+    final wasSuspended = isSuspended;
+    change();
+    if (isSuspended && !wasSuspended) {
+      session
+        ..cancelAim()
+        ..endPlacement();
+    }
+  }
+
+  @override
+  void lifecycleStateChange(AppLifecycleState state) {
+    super.lifecycleStateChange(state);
+    _holdIf(() => _inBackground = state != AppLifecycleState.resumed);
+  }
+
   /// [GameSession.countdownNumber], for the countdown overlay.
   late final countdownNumber = ValueNotifier<int>(session.countdownNumber);
 
@@ -105,14 +142,16 @@ class PendulumFeedingGame extends FlameGame {
       if (_showHitCircles) HitCirclesComponent(session),
       AimGuideComponent(session),
       HudComponent(session),
-      InputLayer(session),
+      InputLayer(session, isActive: () => !isSuspended),
     ]);
   }
 
   /// Runs as many fixed session steps as [dt] (the frame time [s]) calls
-  /// for, turns their events into effects, and publishes the phase.
+  /// for, turns their events into effects, and publishes the phase. Does
+  /// nothing at all while [isSuspended].
   @override
   void update(double dt) {
+    if (isSuspended) return;
     _effectTimeLeft = math.max(0, _effectTimeLeft - dt);
     _resultDelay = math.max(0, _resultDelay - dt);
     final steps = _clock.advance(dt);
