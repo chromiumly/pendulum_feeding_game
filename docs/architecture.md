@@ -42,6 +42,8 @@
 コンポーネント（`lib/game/flame/components/`）は、セッションの状態を描くだけで、ゲームの状態を自分では持たない。入力は `InputLayer` がドラッグを受けてセッションへ渡す。
 
 - **一時停止**: `PendulumFeedingGame` は、縦向きのとき（`portrait`、`GameScreen` が画面の大きさから設定する）と、アプリが前面にないとき（`lifecycleStateChange` で `resumed` 以外）に、`update` で何もしない（`isSuspended`）。ゲームの時間はすべて `update` から進むので、これで全部止まる。Flame 自身もバックグラウンドではエンジンを止めるが、前面に戻ると縦向きのままでも再開してしまうので、理由ごとの旗で、別に持っている。止まった瞬間に、ドラッグ中の狙いと位置決めを取り消す。
+- **再開待ち**: `GameScreen` のゲームは `asksToResume` 付きで作る。カウントダウン中かプレイ中に止まると `awaitingResume` が立ち、これも `isSuspended` の理由になる。縦向きが直っても、前面に戻っても、`resume()`（`ResumeOverlay` のタップ）まで止まったまま。待つ間は BGM も止めておく（`SoundController.holdBgm`）。遊び方のデモは再開の手段がないので、`asksToResume` なしで、すぐに続く。
+- **BGM の一時停止**: `SoundController` は、BGM を止めている理由（縦向きなら `LandscapeGuard`、再開待ちならゲーム）を集合で持ち、空になるまで止める。止める間は、OFF のときの「裏で流れ続ける」時間も進めない（`FlameSoundBackend` のストップウォッチを止める）ので、止めたところから続く。BGM を `FlameAudio.bgm.pause()` で止めるため、flame_audio が前面に戻ったときに勝手に再開することもない。
 
 ## Flutter の画面
 

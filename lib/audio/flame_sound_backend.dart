@@ -19,7 +19,8 @@ import 'web_audio_effects.dart';
 /// would have got to had it played on (see [positionAfterMute]).
 ///
 /// The music also pauses while the app is in the background, and picks up
-/// again when it returns, if it was playing.
+/// again when it returns, if it was playing. While held ([holdBgm]), it is
+/// paused and does not pick up again by itself.
 ///
 /// The effects are decoded when sound is first turned on, so that they start
 /// at once (see [PreloadedEffects]), and played on one Web Audio context
@@ -42,7 +43,7 @@ class FlameSoundBackend implements SoundBackend {
   bool _started = false;
 
   /// Runs from when the music was last silenced, to know how far it would
-  /// have played on.
+  /// have played on. Stopped while the music is held.
   final _silent = Stopwatch();
 
   /// Where the music was when it was last silenced.
@@ -96,6 +97,14 @@ class FlameSoundBackend implements SoundBackend {
       ..reset()
       ..start();
     await FlameAudio.bgm.pause();
+  }
+
+  @override
+  Future<void> holdBgm() async => _silent.stop();
+
+  @override
+  Future<void> releaseBgm() async {
+    if (_started) _silent.start();
   }
 
   @override

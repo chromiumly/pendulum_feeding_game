@@ -17,6 +17,7 @@ import 'countdown_overlay.dart';
 import 'landscape_guard.dart';
 import 'play_bonus_gauge.dart';
 import 'result_popup.dart';
+import 'resume_overlay.dart';
 import 'setup_overlay.dart';
 import 'sound_button.dart';
 import 'sound_scope.dart';
@@ -27,8 +28,9 @@ import 'title_screen.dart';
 /// 844x390 stage coordinates.
 ///
 /// From back to front: the stage background, the setup hint and play-count
-/// bonus gauge, the game (transparent), then the overlays (buttons,
-/// countdown, result).
+/// bonus gauge, the game (transparent), the overlays (buttons, countdown,
+/// result), then "TAP TO RESUME" over everything while the game waits for
+/// it.
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key, this.ranking});
 
@@ -57,6 +59,7 @@ class _GameScreenState extends State<GameScreen> {
       ),
       onGameFinished: (score) => _record(game, score),
       sound: SoundScope.maybeOf(context),
+      asksToResume: true,
     )..portrait = _isPortrait;
     return game;
   }
@@ -167,6 +170,14 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
             const SoundButton(),
+            Positioned.fill(
+              child: ValueListenableBuilder(
+                valueListenable: game.awaitingResume,
+                builder: (context, awaiting, _) => awaiting
+                    ? ResumeOverlay(onResume: game.resume)
+                    : const SizedBox.shrink(),
+              ),
+            ),
           ],
         ),
       ),

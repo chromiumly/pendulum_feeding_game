@@ -145,6 +145,61 @@ void main() {
     await pumpEventQueue();
   });
 
+  group('holding the music', () {
+    test('silences it and stops it where it is, until released', () async {
+      sound.setEnabled(true);
+      sound.holdBgm('portrait');
+      expect(sound.isBgmHeld, isTrue);
+      sound.releaseBgm('portrait');
+      expect(sound.isBgmHeld, isFalse);
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute', 'mute', 'hold', 'release', 'unmute']);
+    });
+
+    test('with sound off, stops it all the same, and keeps it quiet on '
+        'release', () async {
+      sound.holdBgm('portrait');
+      sound.releaseBgm('portrait');
+      await pumpEventQueue();
+      expect(backend.calls, ['hold', 'release']);
+    });
+
+    test('lasts until every reason is released', () async {
+      sound.setEnabled(true);
+      sound.holdBgm('portrait');
+      sound.holdBgm('resume');
+      sound.holdBgm('portrait'); // Already held for this.
+      sound.releaseBgm('portrait');
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute', 'mute', 'hold']);
+
+      sound.releaseBgm('resume');
+      sound.releaseBgm('resume'); // No longer held for this.
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute', 'mute', 'hold', 'release', 'unmute']);
+    });
+
+    test('switching sound while held only takes effect on release', () async {
+      sound.holdBgm('portrait');
+      sound.setEnabled(true);
+      expect(sound.enabled, isTrue);
+      await pumpEventQueue();
+      expect(backend.calls, ['hold']);
+
+      sound.releaseBgm('portrait');
+      await pumpEventQueue();
+      expect(backend.calls, ['hold', 'release', 'unmute']);
+    });
+
+    test('the release that brings the music back unlocks the backend', () {
+      sound.setEnabled(true);
+      sound.holdBgm('resume');
+      expect(backend.unlocks, 1);
+      sound.releaseBgm('resume');
+      expect(backend.unlocks, 2);
+    });
+  });
+
   test('every effect has its file under assets/audio/', () {
     expect(
       {for (final s in Sfx.values) s.file},

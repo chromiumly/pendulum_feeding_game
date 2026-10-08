@@ -41,6 +41,13 @@ abstract interface class SoundBackend {
   /// Silences the music, which plays on unheard.
   Future<void> muteBgm();
 
+  /// Stops the music playing on unheard: from now until [releaseBgm], it
+  /// gets no further. Comes after [muteBgm] if the music was audible.
+  Future<void> holdBgm();
+
+  /// Lets the music play on unheard again, from where [holdBgm] stopped it.
+  Future<void> releaseBgm();
+
   /// Plays [sfx] once, over anything already playing.
   Future<void> playSfx(Sfx sfx);
 
@@ -57,6 +64,10 @@ abstract interface class SoundBackend {
 /// has got to. It lives as long as the app, so the music plays on without a
 /// break across screens. A failure of the [SoundBackend] never reaches the
 /// game: sound just stays quiet.
+///
+/// The music can also be held, e.g. while the phone is in portrait: it then
+/// stops where it is, and once nothing holds it any more it carries on from
+/// there, if sound is on (see [holdBgm]).
 class SoundController extends ChangeNotifier {
   /// Creates a controller with sound off, playing through [backend].
   SoundController(this._backend);
@@ -64,6 +75,9 @@ class SoundController extends ChangeNotifier {
   final SoundBackend _backend;
 
   bool _enabled = false;
+
+  /// What holds the music still; it plays only while this is empty.
+  final _holds = <Object>{};
 
   /// Music changes run one after another, so that quickly switching sound
   /// on and off cannot leave the music in the wrong state.
@@ -76,18 +90,56 @@ class SoundController extends ChangeNotifier {
   void toggle() => setEnabled(!_enabled);
 
   /// Turns sound on or off, with the music following it.
+  /// While the music is held, it only takes note: the music follows once
+  /// it is released.
   void setEnabled(bool enabled) {
     if (_enabled == enabled) return;
     _enabled = enabled;
+    _unlock();
+    if (_holds.isEmpty) {
+      _queueMusic(enabled ? _backend.unmuteBgm : _backend.muteBgm);
+    }
+    notifyListeners();
+  }
+
+  /// Whether anything holds the music still.
+  bool get isBgmHeld => _holds.isNotEmpty;
+
+  /// Holds the music still for [reason], until [releaseBgm] with the same
+  /// [reason]. It stops where it is, even with sound off (where it plays on
+  /// unheard otherwise). Holding it again for the same [reason] does
+  /// nothing.
+  void holdBgm(Object reason) {
+    final wasHeld = isBgmHeld;
+    if (!_holds.add(reason) || wasHeld) return;
+    if (_enabled) _queueMusic(_backend.muteBgm);
+    _queueMusic(_backend.holdBgm);
+  }
+
+  /// Releases the hold for [reason]. Once nothing holds the music, it
+  /// carries on from where it was held: audibly if sound is on. Call it in a
+  /// tap if possible, which is when browsers allow sound to start.
+  void releaseBgm(Object reason) {
+    if (!_holds.remove(reason) || isBgmHeld) return;
+    _queueMusic(_backend.releaseBgm);
+    if (_enabled) {
+      _unlock();
+      _queueMusic(_backend.unmuteBgm);
+    }
+  }
+
+  /// Lets the backend start sound, at once.
+  void _unlock() {
     try {
       _backend.unlock();
     } on Object catch (error) {
       debugPrint('Sound failed: $error');
     }
-    _music = _music.then(
-      (_) => _quietly(enabled ? _backend.unmuteBgm : _backend.muteBgm),
-    );
-    notifyListeners();
+  }
+
+  /// Runs [change] to the music after those before it.
+  void _queueMusic(Future<void> Function() change) {
+    _music = _music.then((_) => _quietly(change));
   }
 
   /// Plays [sfx] if sound is on.

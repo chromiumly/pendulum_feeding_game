@@ -30,6 +30,10 @@ import 'stage_style.dart';
 /// carries on from where it was as soon as neither holds. Flame pauses the
 /// engine in the background too, but its own resume would also start a game
 /// that is still in portrait.
+///
+/// A game that [asksToResume] and is stopped mid-game (counting down or in
+/// play) then waits for the player to [resume] it, with the music held too,
+/// so that it does not carry on before the player is ready.
 class PendulumFeedingGame extends FlameGame {
   /// [session] is the game to host; its config sets the world size.
   /// [onGameFinished] is called with the final score once it ends.
@@ -42,6 +46,7 @@ class PendulumFeedingGame extends FlameGame {
     this.onGameFinished,
     bool? showHitCircles,
     this.sound,
+    this.asksToResume = false,
   }) : _showHitCircles = showHitCircles ?? StageStyle.showHitCircles,
        _clock = FixedStepClock(stepDt: session.config.fixedDt),
        super(
@@ -59,6 +64,11 @@ class PendulumFeedingGame extends FlameGame {
   /// Called with the final score as soon as the game has finished, before
   /// the result is shown (see [phase]), e.g. to start recording it.
   final void Function(int score)? onGameFinished;
+
+  /// Whether a game stopped mid-game waits for [resume] (see
+  /// [awaitingResume]) instead of carrying on by itself. The real game does;
+  /// the how-to-play demo, which has no way to resume, does not.
+  final bool asksToResume;
 
   final bool _showHitCircles;
   final FixedStepClock _clock;
@@ -90,11 +100,17 @@ class PendulumFeedingGame extends FlameGame {
   /// such as the notification centre has the focus).
   bool _inBackground = false;
 
+  /// Whether the game, stopped mid-game, waits for the player to [resume]
+  /// it, for the "TAP TO RESUME" overlay. Only if it [asksToResume].
+  final awaitingResume = ValueNotifier<bool>(false);
+
   /// Whether the game is held still: nothing moves, the clock included.
-  bool get isSuspended => _portrait || _inBackground;
+  bool get isSuspended => _portrait || _inBackground || awaitingResume.value;
 
   /// Runs [change] to the reasons for holding still. A drag under way when
-  /// the game stops is dropped: its finger may never come back up here.
+  /// the game stops is dropped: its finger may never come back up here. A
+  /// game stopped mid-game that [asksToResume] waits for [resume], with the
+  /// music held meanwhile.
   void _holdIf(void Function() change) {
     final wasSuspended = isSuspended;
     change();
@@ -102,7 +118,25 @@ class PendulumFeedingGame extends FlameGame {
       session
         ..cancelAim()
         ..endPlacement();
+      if (asksToResume && _isMidGame) {
+        awaitingResume.value = true;
+        sound?.holdBgm(this);
+      }
     }
+  }
+
+  /// Whether the game's time is running: counting down or in play.
+  bool get _isMidGame => switch (session.phase) {
+    GamePhase.countdown || GamePhase.playing => true,
+    GamePhase.setup || GamePhase.finished => false,
+  };
+
+  /// Carries on with a game that is [awaitingResume], the music included.
+  /// Called in the player's tap, when browsers allow the music to start.
+  void resume() {
+    if (!awaitingResume.value) return;
+    awaitingResume.value = false;
+    sound?.releaseBgm(this);
   }
 
   @override

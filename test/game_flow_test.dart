@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pendulum_feeding_game/app/app.dart';
 import 'package:pendulum_feeding_game/app/result_popup.dart';
+import 'package:pendulum_feeding_game/app/resume_overlay.dart';
 import 'package:pendulum_feeding_game/audio/sound_controller.dart';
 import 'package:pendulum_feeding_game/game/flame/components/stage_components.dart';
 import 'package:pendulum_feeding_game/game/flame/pendulum_feeding_game.dart';
@@ -210,17 +211,25 @@ void main() {
   });
 
   testWidgets('turning the phone to portrait mid-game holds it still under '
-      'the rotate prompt; back to landscape, it carries on', (tester) async {
+      'the rotate prompt, music included; back to landscape, it waits for '
+      'TAP TO RESUME', (tester) async {
     tester.view.physicalSize = const Size(844, 390);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const PendulumFeedingApp());
+    final backend = FakeSoundBackend();
+    final sound = SoundController(backend)..setEnabled(true);
+    await tester.pumpWidget(PendulumFeedingApp(sound: sound));
     Future<void> runSeconds(int seconds) async {
       for (var i = 0; i < seconds * 60; i++) {
         await tester.pump(const Duration(microseconds: 16667));
       }
     }
+
+    List<Object> music() => [
+      for (final call in backend.calls)
+        if (call is String && !call.startsWith('stop')) call,
+    ];
 
     PendulumFeedingGame game() => tester
         .widget<GameWidget<PendulumFeedingGame>>(
@@ -233,11 +242,13 @@ void main() {
     await tester.tap(find.text('スタート'));
     await runSeconds(6);
     expect(game().session.phase, GamePhase.playing);
+    expect(find.text(ResumeOverlay.text), findsNothing);
 
     tester.view.physicalSize = const Size(390, 844);
     await tester.pump();
     expect(find.text('端末を横向きにしてください'), findsOneWidget);
     expect(game().isSuspended, isTrue);
+    expect(music(), ['unmute', 'mute', 'hold']);
     final held = game().session.remainingSeconds;
     await runSeconds(3);
     expect(game().session.remainingSeconds, held);
@@ -245,8 +256,77 @@ void main() {
     tester.view.physicalSize = const Size(844, 390);
     await tester.pump();
     expect(find.text('端末を横向きにしてください'), findsNothing);
+    expect(find.text(ResumeOverlay.text), findsOneWidget);
+    await runSeconds(2);
+    expect(game().session.remainingSeconds, held);
+    expect(music(), ['unmute', 'mute', 'hold']);
+
+    // A tap anywhere carries on, and reaches nothing underneath.
+    await tester.tapAt(const Offset(30, 25)); // Over the retry button.
+    await tester.pump();
+    expect(find.text(ResumeOverlay.text), findsNothing);
+    expect(music(), ['unmute', 'mute', 'hold', 'release', 'unmute']);
     await runSeconds(2);
     expect(game().session.remainingSeconds, lessThan(held - 1.5));
+    expect(game().session.phase, GamePhase.playing);
+  });
+
+  testWidgets('back in front mid-game, the game waits for TAP TO RESUME', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const PendulumFeedingApp());
+    Future<void> runSeconds(int seconds) async {
+      for (var i = 0; i < seconds * 60; i++) {
+        await tester.pump(const Duration(microseconds: 16667));
+      }
+    }
+
+    await tester.tap(find.text('TAP TO START'));
+    await runSeconds(1);
+    await tester.tap(find.text('スタート'));
+    await runSeconds(2);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await runSeconds(3);
+    expect(find.text(ResumeOverlay.text), findsOneWidget);
+    expect(find.text('START'), findsNothing); // The countdown stood still.
+
+    // The last second of the countdown, then "START" for a second.
+    await tester.tap(find.text(ResumeOverlay.text));
+    await runSeconds(1);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(microseconds: 16667));
+    }
+    expect(find.text(ResumeOverlay.text), findsNothing);
+    expect(find.text('START'), findsOneWidget);
+  });
+
+  testWidgets('on the title, the music is held in portrait and comes back '
+      'on rotating', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final backend = FakeSoundBackend();
+    final sound = SoundController(backend)..setEnabled(true);
+    await tester.pumpWidget(PendulumFeedingApp(sound: sound));
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pump();
+    expect(sound.isBgmHeld, isTrue);
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pump();
+    expect(sound.isBgmHeld, isFalse);
+    expect(find.text(ResumeOverlay.text), findsNothing);
+    await tester.pump();
+    expect(backend.calls, ['unmute', 'mute', 'hold', 'release', 'unmute']);
   });
 
   testWidgets('setup drag reaches the game through the scaled stage', (

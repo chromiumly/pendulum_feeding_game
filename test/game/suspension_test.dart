@@ -1,10 +1,13 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pendulum_feeding_game/audio/sound_controller.dart';
 import 'package:pendulum_feeding_game/game/flame/pendulum_feeding_game.dart';
 import 'package:pendulum_feeding_game/game/model/game_config.dart';
 import 'package:pendulum_feeding_game/game/model/game_session.dart';
 import 'package:pendulum_feeding_game/math/vec2.dart';
+
+import '../audio/fake_sound_backend.dart';
 
 /// One frame at 60 Hz, which is one fixed step.
 const _frame = 1 / 60;
@@ -105,6 +108,105 @@ void main() {
         reason: '$state',
       );
     }
+  });
+
+  group('a game that asks to resume', () {
+    ({PendulumFeedingGame game, FakeSoundBackend backend}) playing() {
+      final backend = FakeSoundBackend();
+      final game = PendulumFeedingGame(
+        session: GameSession(
+          config: const GameConfig(countdownSeconds: 0, startCueSeconds: 0),
+        ),
+        sound: SoundController(backend)..setEnabled(true),
+        asksToResume: true,
+      )..startCountdown();
+      game.update(_frame);
+      expect(game.session.phase, GamePhase.playing);
+      return (game: game, backend: backend);
+    }
+
+    test('stopped in portrait, waits for resume after rotating back, with '
+        'the music held', () async {
+      final (:game, :backend) = playing();
+      _run(game, 30);
+      game.portrait = true;
+      expect(game.awaitingResume.value, isTrue);
+      final held = _motion(game);
+
+      game.portrait = false;
+      expect(game.isSuspended, isTrue);
+      _run(game, 120);
+      expect(_motion(game), held);
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute', 'mute', 'hold']);
+
+      game.resume();
+      expect(game.awaitingResume.value, isFalse);
+      expect(game.isSuspended, isFalse);
+      _run(game, 60);
+      expect(game.session.remainingSeconds, closeTo(held.$1 - 1, 1e-9));
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute', 'mute', 'hold', 'release', 'unmute']);
+    });
+
+    test('back in front, waits for resume too', () {
+      for (final state in [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ]) {
+        final (:game, backend: _) = playing();
+        game.lifecycleStateChange(state);
+        game.lifecycleStateChange(AppLifecycleState.resumed);
+        expect(game.awaitingResume.value, isTrue, reason: '$state');
+        final held = _motion(game);
+        _run(game, 60);
+        expect(_motion(game), held, reason: '$state');
+
+        game.resume();
+        _run(game, 60);
+        expect(game.session.remainingSeconds, lessThan(held.$1));
+      }
+    });
+
+    test('in the countdown as well', () {
+      final game = PendulumFeedingGame(
+        session: GameSession(),
+        asksToResume: true,
+      )..startCountdown();
+      _run(game, 30);
+      game.portrait = true;
+      game.portrait = false;
+      expect(game.awaitingResume.value, isTrue);
+      _run(game, 300);
+      expect(game.session.phase, GamePhase.countdown);
+    });
+
+    test('but not on the setup screen, where no time runs', () {
+      final game = PendulumFeedingGame(
+        session: GameSession(),
+        asksToResume: true,
+      );
+      game.portrait = true;
+      game.portrait = false;
+      expect(game.awaitingResume.value, isFalse);
+      expect(game.isSuspended, isFalse);
+    });
+
+    test('resuming a game that does not wait does nothing', () async {
+      final (:game, :backend) = playing();
+      game.resume();
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute']);
+    });
+  });
+
+  test('a game that does not ask to resume never waits for it', () {
+    final game = _playing();
+    game.portrait = true;
+    game.portrait = false;
+    expect(game.awaitingResume.value, isFalse);
+    expect(game.isSuspended, isFalse);
   });
 
   test('back in front while still in portrait, it stays held', () {
