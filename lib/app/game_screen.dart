@@ -99,6 +99,7 @@ class _GameScreenState extends State<GameScreen> {
   /// recorded.
   void _retry() {
     _stopApplause();
+    _game.leave();
     setState(() {
       _game = _newGame(_game.session.placedPendulum);
       _ranking.value = const RankingPending();

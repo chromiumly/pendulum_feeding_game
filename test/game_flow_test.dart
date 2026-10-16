@@ -271,6 +271,41 @@ void main() {
     expect(game().session.phase, GamePhase.playing);
   });
 
+  testWidgets('giving up mid-game keeps the music playing', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final backend = FakeSoundBackend();
+    final sound = SoundController(backend)..setEnabled(true);
+    await tester.pumpWidget(PendulumFeedingApp(sound: sound));
+    Future<void> runSeconds(int seconds) async {
+      for (var i = 0; i < seconds * 60; i++) {
+        await tester.pump(const Duration(microseconds: 16667));
+      }
+    }
+
+    List<Object> music() => [
+      for (final call in backend.calls)
+        if (call is String && !call.startsWith('stop')) call,
+    ];
+
+    await tester.tap(find.text('TAP TO START'));
+    await runSeconds(1);
+
+    // In the countdown, then in play.
+    for (final seconds in [1, 6]) {
+      await tester.tap(find.text('スタート'));
+      await runSeconds(seconds);
+      await tester.tap(find.bySemanticsLabel('やり直す'));
+      await runSeconds(1);
+      expect(find.text('スタート'), findsOneWidget);
+      expect(find.text(ResumeOverlay.text), findsNothing);
+      expect(sound.isBgmHeld, isFalse);
+      expect(music(), ['unmute']);
+    }
+  });
+
   testWidgets('back in front mid-game, the game waits for TAP TO RESUME', (
     tester,
   ) async {

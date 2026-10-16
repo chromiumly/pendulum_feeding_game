@@ -193,6 +193,26 @@ void main() {
       expect(game.isSuspended, isFalse);
     });
 
+    test('once left, the pause sent as its widget is torn down holds '
+        'nothing', () async {
+      final (:game, :backend) = playing();
+      game.leave();
+      game.lifecycleStateChange(AppLifecycleState.paused);
+      expect(game.awaitingResume.value, isFalse);
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute']);
+    });
+
+    test('left while waiting for resume, it lets go of the music', () async {
+      final (:game, :backend) = playing();
+      game.portrait = true;
+      game.leave();
+      expect(game.awaitingResume.value, isFalse);
+      expect(game.sound!.isBgmHeld, isFalse);
+      await pumpEventQueue();
+      expect(backend.calls, ['unmute', 'mute', 'hold', 'release', 'unmute']);
+    });
+
     test('resuming a game that does not wait does nothing', () async {
       final (:game, :backend) = playing();
       game.resume();

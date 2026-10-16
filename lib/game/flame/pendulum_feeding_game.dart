@@ -34,6 +34,9 @@ import 'stage_style.dart';
 /// A game that [asksToResume] and is stopped mid-game (counting down or in
 /// play) then waits for the player to [resume] it, with the music held too,
 /// so that it does not carry on before the player is ready.
+///
+/// A game given up for another is told so with [leave], and from then on
+/// holds nothing.
 class PendulumFeedingGame extends FlameGame {
   /// [session] is the game to host; its config sets the world size.
   /// [onGameFinished] is called with the final score once it ends.
@@ -104,6 +107,9 @@ class PendulumFeedingGame extends FlameGame {
   /// it, for the "TAP TO RESUME" overlay. Only if it [asksToResume].
   final awaitingResume = ValueNotifier<bool>(false);
 
+  /// Whether the game has been given up (see [leave]).
+  bool _left = false;
+
   /// Whether the game is held still: nothing moves, the clock included.
   bool get isSuspended => _portrait || _inBackground || awaitingResume.value;
 
@@ -112,6 +118,7 @@ class PendulumFeedingGame extends FlameGame {
   /// game stopped mid-game that [asksToResume] waits for [resume], with the
   /// music held meanwhile.
   void _holdIf(void Function() change) {
+    if (_left) return;
     final wasSuspended = isSuspended;
     change();
     if (isSuspended && !wasSuspended) {
@@ -137,6 +144,26 @@ class PendulumFeedingGame extends FlameGame {
     if (!awaitingResume.value) return;
     awaitingResume.value = false;
     sound?.releaseBgm(this);
+  }
+
+  /// Gives the game up for good, e.g. for a new one: it lets go of the
+  /// music if it held it, and stops taking note of what would hold it
+  /// still. Flame tells a game it is paused as its widget is torn down,
+  /// which would otherwise hold the music for a game no one can resume.
+  /// Called in the player's tap, when browsers allow the music to start.
+  void leave() {
+    if (_left) return;
+    _left = true;
+    awaitingResume.value = false;
+    sound?.releaseBgm(this);
+  }
+
+  /// In case the game leaves the screen without [leave]: then the music
+  /// has been held as it was torn down, and is let go here.
+  @override
+  void onRemove() {
+    leave();
+    super.onRemove();
   }
 
   @override
