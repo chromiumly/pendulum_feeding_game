@@ -43,7 +43,7 @@ abstract final class TalkTheme {
 /// The slide on how the game was made.
 abstract final class TalkMaking {
   static const title = '作り方';
-  static const message = '思いつきからみなさんのスマホに届くまで';
+  static const message = '制作を始めてからみなさんのスマホに届くまで';
   static const making = '作る（これまで）';
   static const playing = '遊ぶ（本日）';
 }

@@ -142,7 +142,7 @@ abstract final class SlideTextStyles {
 
   /// The talk's title above 表彰式.
   static final awardTalkTitle = _base.copyWith(
-    fontSize: 40,
+    fontSize: 48,
     color: SlidePalette.muted,
   );
 

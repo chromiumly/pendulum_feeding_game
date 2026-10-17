@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue *)",
+      "Bash(curl -s https://api.github.com/repos/chromiumly/pendulum_feeding_game/issues/1)",
+      "Bash(curl -s https://api.github.com/repos/chromiumly/pendulum_feeding_game/issues/1/comments)",
+      "Read(//home/kurokawa/.pub-cache/hosted/pub.dev/flame-1.38.2/lib/src/game/game_widget/**)",
+      "Read(//home/kurokawa/.pub-cache/hosted/pub.dev/flame-1.38.2/lib/src/game/**)"
+    ]
+  }
+}
