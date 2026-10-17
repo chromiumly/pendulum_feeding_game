@@ -45,6 +45,7 @@ Object.keys(localStorage).filter(k => k.startsWith('ranking.')).forEach(k => loc
 ```bash
 dart run tool/ranking/player_ids.dart generate [--count 50]   # ID を作り、players.csv と QR コードの印刷用ページを書き出す
 dart run tool/ranking/player_ids.dart register [--emulator]   # players.csv の ID を Firestore に登録する（登録済みの回数は消えない）
+dart run tool/ranking/player_ids.dart roster [--dummy]        # 発表ページの名簿 roster.json を書き出す（presentation.md）
 dart run tool/ranking/player_ids.dart reset [--emulator]      # 各コレクションの件数を表示する（何も消さない）
 dart run tool/ranking/player_ids.dart reset --confirm pendulum-feeding-game   # 全データを消して ID を登録し直す
 ```

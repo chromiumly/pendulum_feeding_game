@@ -12,6 +12,13 @@
 ///       player's game count. With --emulator it writes to a local
 ///       Firestore emulator (localhost:8080) instead.
 ///
+///   dart run tool/ranking/player_ids.dart roster [--dummy]
+///       Writes tool/ranking/out/roster.json, the display names for the
+///       ranking on the presentation page (docs/presentation.md), from a
+///       fourth column `name` added to players.csv by hand. With --dummy,
+///       every player gets a made-up name instead, for rehearsing. The file
+///       has the hashed IDs (as bests/ is keyed), never the IDs.
+///
 ///   dart run tool/ranking/player_ids.dart reset [--emulator]
 ///       Shows how many documents each ranking collection has. Deletes
 ///       nothing.
@@ -32,6 +39,8 @@ import 'dart:math' as math;
 
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
+import 'package:pendulum_feeding_game/presentation/dummy_names.dart';
+import 'package:pendulum_feeding_game/presentation/roster.dart';
 import 'package:qr/qr.dart';
 
 const _gameUrl = 'https://chromiumly.github.io/pendulum_feeding_game/';
@@ -45,9 +54,10 @@ const _idChars = 'abcdefghijklmnopqrstuvwxyz0123456789';
 final _outDir = Directory('tool/ranking/out');
 final _csv = File('tool/ranking/out/players.csv');
 final _html = File('tool/ranking/out/qr.html');
+final _roster = File('tool/ranking/out/roster.json');
 
-/// Runs the command named by the first of [args]: generate, register or
-/// reset, with its options. Run from the project root.
+/// Runs the command named by the first of [args]: generate, register,
+/// roster or reset, with its options. Run from the project root.
 Future<void> main(List<String> args) async {
   if (!File('pubspec.yaml').existsSync()) {
     _fail('Run from the project root.');
@@ -57,6 +67,8 @@ Future<void> main(List<String> args) async {
       _generate(count: int.parse(_option(args, '--count') ?? '50'));
     case 'register':
       await _register(emulator: args.contains('--emulator'));
+    case 'roster':
+      _writeRoster(dummy: args.contains('--dummy'));
     case 'reset':
       await _reset(
         emulator: args.contains('--emulator'),
@@ -65,7 +77,7 @@ Future<void> main(List<String> args) async {
     default:
       _fail(
         'Usage: dart run tool/ranking/player_ids.dart '
-        'generate [--count N] | register [--emulator] | '
+        'generate [--count N] | register [--emulator] | roster [--dummy] | '
         'reset [--emulator] [--confirm <project ID>]',
       );
   }
@@ -193,6 +205,40 @@ List<String> _readIds() {
     _fail('${_csv.path} has a malformed ID.');
   }
   return ids;
+}
+
+// ---- roster ----------------------------------------------------------------
+
+/// Writes roster.json: each player's name from players.csv's name column,
+/// or a made-up one if [dummy]. Exits with an error if a player has no
+/// name.
+void _writeRoster({required bool dummy}) {
+  final ids = _readIds();
+  final names = dummy
+      ? [for (var i = 0; i < ids.length; i++) dummyName(i)]
+      : [
+          for (final line in _csv.readAsLinesSync().skip(1))
+            if (line.trim().isNotEmpty)
+              line.split(',').skip(3).join(',').trim(),
+        ];
+  final missing = [
+    for (final (i, name) in names.indexed)
+      if (name.isEmpty) i + 1,
+  ];
+  if (missing.isNotEmpty) {
+    _fail(
+      'No name for No.${missing.join(', No.')} in ${_csv.path}: add a '
+      'fourth column, name, or use --dummy.',
+    );
+  }
+  final roster = Roster({
+    for (final (i, id) in ids.indexed) Roster.keyOf(id): names[i],
+  });
+  _roster.writeAsStringSync(roster.encode());
+  stdout.writeln(
+    'Wrote ${roster.length} names${dummy ? ' (made up)' : ''} to '
+    '${_roster.path}',
+  );
 }
 
 // ---- reset -----------------------------------------------------------------

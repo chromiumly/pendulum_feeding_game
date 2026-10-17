@@ -26,6 +26,7 @@
 | [物理](docs/physics.md) | 二重振り子のモデルと数値積分、食べ物の飛行、当たり判定 |
 | [アーキテクチャ](docs/architecture.md) | コードの構成と責務、ゲームの状態と描画の分け方、テスト |
 | [Firebase](docs/firebase.md) | プレイヤー ID、Firestore のデータ構成とルール、管理ツール |
+| [発表ページ](docs/presentation.md) | 披露宴のライトニングトークと表彰式のページ、名簿の作り方と消し方 |
 | [デプロイ](docs/deployment.md) | GitHub Pages への公開、ルールとの順番、本番前の準備 |
 | [アセット](docs/assets.md) | 画像・アイコン・フォント・音声の置き場所と作り方、出典 |
 

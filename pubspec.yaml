@@ -80,6 +80,13 @@ flutter:
     - assets/images/groom/
     - assets/images/pendulum/
     - assets/icons/
+    # The whole Japanese font, for the presentation page only: names can have
+    # any character. Not in `fonts:`, so the game never downloads it.
+    - art/fonts/MPLUSRounded1c-Bold.ttf
+    # The presentation page's images. Web assets are fetched when used, so
+    # the game never downloads them either.
+    - assets/presentation/
+    - assets/presentation/icons/
 
   fonts:
     - family: MPLUSRounded1c

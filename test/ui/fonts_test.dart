@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pendulum_feeding_game/presentation/presentation_fonts.dart';
 
 import '../../tool/font_support.dart';
 
@@ -24,9 +25,7 @@ void main() {
   // so these tests are the guard against a new text that needs `dart run
   // tool/fonts.dart`.
   group('no missing characters (no boxes)', () {
-    final text = stringLiteralCodePoints(Directory('lib'))
-        .where((c) => c >= 0x20)
-        .toSet();
+    final text = gameCodePoints().where((c) => c >= 0x20).toSet();
     final rounded = fontCodePoints(
       File('assets/fonts/MPLUSRounded1c-Bold.ttf'),
     );
@@ -61,6 +60,20 @@ void main() {
       expect(text, containsAll('遊び方'.runes));
       expect(text.length, greaterThan(100));
     });
+  });
+
+  test('the presentation page\'s font has every character of its texts', () {
+    // It loads the whole font (PresentationFonts), whatever the game's has.
+    final text = stringLiteralCodePoints(Directory('lib/presentation'))
+        .where((c) => c >= 0x20)
+        .toSet();
+    final whole = fontCodePoints(File(PresentationFonts.roundedAsset));
+    expect(text, containsAll('表彰式'.runes));
+    expect(
+      text.difference(whole),
+      isEmpty,
+      reason: _show(text.difference(whole)),
+    );
   });
 
   test('the fonts in assets/ are the cut-down ones', () {
