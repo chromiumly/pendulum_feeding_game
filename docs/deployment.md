@@ -12,7 +12,8 @@
 1. Flutter 3.47.5（stable）を用意し、`flutter pub get`
 2. `flutter analyze` と `flutter test`。**どちらかが失敗すると、そこで止まり、公開されない**
 3. `flutter build web --release --base-href /pendulum_feeding_game/`
-4. `build/web` を GitHub Pages に公開
+4. 発表ページ（[presentation.md](presentation.md)）を `lib/presentation/main.dart` からビルドして、`build/web/present/` に置く
+5. `build/web` を GitHub Pages に公開
 
 Firestore のセキュリティルールのテスト（エミュレータが必要）は、ここには入っていない。ルールを変えたときは、手元で実行する（[firebase.md](firebase.md#セキュリティルールのテストと反映)）。プッシュする前に、手元でも同じ確認をしておくと、失敗に気づくのが早い。
 

@@ -17,7 +17,8 @@
 /// * Every printable ASCII character, in every font: digits, letters and
 ///   signs, for the score and the like, whatever they are typed as.
 /// * In the Japanese font, also every character in a string literal of
-///   `lib/` (comments are not read; see [stringLiteralCodePoints]). A
+///   `lib/` (comments are not read; see [stringLiteralCodePoints]), but
+///   the presentation page's, which loads the whole font ([gameCodePoints]). A
 ///   character that the original font does not have is an error: it would
 ///   show as a box, or in another font.
 ///
@@ -54,7 +55,7 @@ void main() {
     exit(1);
   }
   final text = {
-    for (final c in stringLiteralCodePoints(Directory('lib')))
+    for (final c in gameCodePoints())
       if (c > 0x7E) c,
   };
   stdout.writeln('${text.length} characters besides ASCII in lib/');

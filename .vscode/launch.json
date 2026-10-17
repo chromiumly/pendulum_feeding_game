@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Game",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["-d", "web-server", "--web-port", "5000"]
+    },
+    {
+      "name": "Presentation",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/presentation/main.dart",
+      "args": ["-d", "web-server", "--web-port", "5002"]
+    },
+    {
+      "name": "Presentation (demo data)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/presentation/main.dart",
+      "args": ["-d", "web-server", "--web-port", "5001", "--dart-define=PRESENTATION_DEMO=true"]
+    }
+  ]
+}

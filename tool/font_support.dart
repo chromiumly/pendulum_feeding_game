@@ -11,14 +11,26 @@ import 'dart:typed_data';
 /// Comments are not read, so that a note such as `// 1. パフェ` does not put
 /// its characters into the font. Everything else a Dart file writes as text
 /// is a string literal.
-Set<int> stringLiteralCodePoints(Directory dir) {
+///
+/// Files under [except] are left out.
+Set<int> stringLiteralCodePoints(Directory dir, {Directory? except}) {
   final found = <int>{};
+  final skipped = except == null ? null : '${except.absolute.path}/';
   for (final file in dir.listSync(recursive: true).whereType<File>()) {
     if (!file.path.endsWith('.dart')) continue;
+    if (skipped != null && file.absolute.path.startsWith(skipped)) continue;
     _Scanner(file.readAsStringSync().runes.toList(), found).code(0);
   }
   return found;
 }
+
+/// The characters the game writes: those of `lib/`, but for the
+/// presentation page (`lib/presentation/`), which loads the whole font and
+/// is not cut down to it.
+Set<int> gameCodePoints() => stringLiteralCodePoints(
+  Directory('lib'),
+  except: Directory('lib/presentation'),
+);
 
 /// Reads Dart source: skips the code and the comments, and collects the
 /// characters of the strings into [found].

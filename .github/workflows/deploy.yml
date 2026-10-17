@@ -39,6 +39,14 @@ jobs:
       # Project Pages are served from /<repository>/.
       - run: flutter build web --release --base-href /pendulum_feeding_game/
 
+      # The presentation page (docs/presentation.md), served under /present/.
+      - run: >-
+          flutter build web --release
+          --target lib/presentation/main.dart
+          --base-href /pendulum_feeding_game/present/
+          --output "$PWD/build/present"
+      - run: cp -r build/present build/web/present
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v4
