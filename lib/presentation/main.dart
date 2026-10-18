@@ -18,6 +18,7 @@ import 'roster.dart';
 import 'roster_store.dart';
 import 'standings.dart';
 import 'standings_source.dart';
+import 'talk_content.dart';
 
 /// Whether to show [DemoStandings] instead of Firestore.
 const _demo = bool.fromEnvironment('PRESENTATION_DEMO');
@@ -52,7 +53,7 @@ Future<void> main() async {
 
   runApp(
     MaterialApp(
-      title: '花嫁もぐもぐチャレンジの作り方',
+      title: TalkCover.title,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: PresentationFonts.rounded),
       home: PresentationScreen(

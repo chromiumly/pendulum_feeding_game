@@ -25,6 +25,9 @@ enum PresentationPage { cover, concept, theme, making, award, ranking }
 /// Space Enter for the next page, ← ↑ PageUp Backspace for the one before,
 /// Home and End for the first and last, and F to freeze or unfreeze the
 /// ranking. Entering the ranking page freezes it (see [RankingBoard]).
+/// With no keys (a phone), a tap or click on the left or right sixth of the
+/// screen turns back or on; that edge glows under the mouse and flashes when
+/// tapped, except where there is no page that way.
 ///
 /// A click or key press also asks for full screen ([onUserGesture]).
 ///
@@ -62,7 +65,8 @@ class PresentationScreen extends StatefulWidget {
   State<PresentationScreen> createState() => _PresentationScreenState();
 }
 
-class _PresentationScreenState extends State<PresentationScreen> {
+class _PresentationScreenState extends State<PresentationScreen>
+    with SingleTickerProviderStateMixin {
   final _focus = FocusNode();
   var _page = PresentationPage.cover;
   late Roster? _roster = widget.initialRoster;
@@ -85,6 +89,7 @@ class _PresentationScreenState extends State<PresentationScreen> {
   void dispose() {
     unawaited(_drops.cancel());
     _toastTimer?.cancel();
+    _flash.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -131,6 +136,12 @@ class _PresentationScreenState extends State<PresentationScreen> {
   void _step(int by) {
     const pages = PresentationPage.values;
     _goTo(pages[(_page.index + by).clamp(0, pages.length - 1)]);
+  }
+
+  /// Whether there is a page that way: -1 back, 1 on.
+  bool _canStep(int by) {
+    final index = _page.index + by;
+    return index >= 0 && index < PresentationPage.values.length;
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -180,35 +191,132 @@ class _PresentationScreenState extends State<PresentationScreen> {
           widget.onUserGesture?.call();
           _focus.requestFocus();
         },
-        // Gives the text its default style (no debug underline).
-        child: Material(
-          type: MaterialType.transparency,
-          child: SlideViewport(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  child: KeyedSubtree(key: ValueKey(_page), child: _slide()),
+        // A tap or click on the left or right edge turns the page, for phones
+        // and tablets with no keys; the buttons on the slides take their own.
+        // The edge glows while the mouse is over it, and flashes when tapped.
+        child: LayoutBuilder(
+          builder: (context, box) {
+            int? sideAt(double x) {
+              final at = x / box.maxWidth;
+              if (at < _edge) return -1;
+              if (at > 1 - _edge) return 1;
+              return null;
+            }
+
+            return MouseRegion(
+              cursor: _lit(_hovered)
+                  ? SystemMouseCursors.click
+                  : MouseCursor.defer,
+              onHover: (event) => _hover(sideAt(event.localPosition.dx)),
+              onExit: (_) => _hover(null),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (details) {
+                  final side = sideAt(details.localPosition.dx);
+                  if (side == null || !_canStep(side)) return;
+                  _step(side);
+                  _flashSide = side;
+                  unawaited(_flash.forward(from: 0));
+                },
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _slides(),
+                    for (final side in const [-1, 1])
+                      Positioned(
+                        top: 0,
+                        bottom: 0,
+                        left: side < 0 ? 0 : null,
+                        right: side > 0 ? 0 : null,
+                        width: box.maxWidth * _edge,
+                        child: _glow(side),
+                      ),
+                  ],
                 ),
-                if (_roster == null)
-                  Positioned(
-                    left: 40,
-                    bottom: 32,
-                    child: _NoRosterNotice(
-                      onPick: widget.pickFile == null ? null : _pickRoster,
-                    ),
-                  ),
-                if (_toast case final toast?)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 120,
-                    child: Center(child: _Toast(toast)),
-                  ),
-              ],
-            ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// How much of the screen's width on each side turns the page when tapped.
+  static const _edge = 1 / 6;
+
+  /// The edge under the mouse: -1 left, 1 right, or null.
+  int? _hovered;
+
+  /// The edge last tapped, and its flash, fading from full to nothing.
+  var _flashSide = 1;
+  late final _flash = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 450),
+    value: 1,
+  );
+
+  /// Whether the edge on [side] glows under the mouse: not on the first
+  /// page's left nor the last page's right, where there is no page to go.
+  bool _lit(int? side) => side != null && _canStep(side);
+
+  void _hover(int? side) {
+    if (side != _hovered) setState(() => _hovered = side);
+  }
+
+  /// The glow on one edge: while hovered, and the flash over it (the two
+  /// add up, so a click lights the hovered edge a little more).
+  Widget _glow(int side) {
+    final glow = CustomPaint(painter: _EdgeGlowPainter(side: side));
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedOpacity(
+            opacity: _hovered == side && _lit(side) ? 1 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: glow,
           ),
+          AnimatedBuilder(
+            animation: _flash,
+            builder: (context, child) => Opacity(
+              opacity: side == _flashSide ? 1 - _flash.value : 0,
+              child: child,
+            ),
+            child: glow,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _slides() {
+    // Gives the text its default style (no debug underline).
+    return Material(
+      type: MaterialType.transparency,
+      child: SlideViewport(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: KeyedSubtree(key: ValueKey(_page), child: _slide()),
+            ),
+            if (_roster == null)
+              Positioned(
+                left: 40,
+                bottom: 32,
+                child: _NoRosterNotice(
+                  onPick: widget.pickFile == null ? null : _pickRoster,
+                ),
+              ),
+            if (_toast case final toast?)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 120,
+                child: Center(child: _Toast(toast)),
+              ),
+          ],
         ),
       ),
     );
@@ -236,6 +344,43 @@ class _PresentationScreenState extends State<PresentationScreen> {
       ],
     );
   }
+}
+
+/// A soft white glow on a screen edge, like the outer rim of a fan: a round
+/// bulge out of the edge, brightest along the edge and fading to its rim.
+class _EdgeGlowPainter extends CustomPainter {
+  const _EdgeGlowPainter({required this.side});
+
+  /// -1 for the left edge, 1 for the right.
+  final int side;
+
+  static const _white = Color(0xFFFFFFFF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // The bulge reaches most of the way across, along most of the height.
+    final depth = size.width * 0.8;
+    final half = size.height * 0.4;
+    final radius = (half * half + depth * depth) / (2 * depth);
+    final edgeX = side < 0 ? 0.0 : size.width;
+    final center = Offset(edgeX + side * (radius - depth), size.height / 2);
+    final inner = (radius - depth) / radius;
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          _white.withValues(alpha: 0.65),
+          _white.withValues(alpha: 0.3),
+          _white.withValues(alpha: 0),
+        ],
+        stops: [inner, inner + (1 - inner) * 0.6, 1],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas
+      ..clipRect(Offset.zero & size)
+      ..drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(_EdgeGlowPainter oldDelegate) => side != oldDelegate.side;
 }
 
 /// Says that there is no roster yet, and how to load one.

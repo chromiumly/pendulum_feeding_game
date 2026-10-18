@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -109,6 +110,67 @@ void main() {
     expect(find.text(TalkCover.title), findsOneWidget);
 
     expect(gestures, greaterThan(0)); // For full screen.
+  });
+
+  testWidgets(
+    'a tap on the right or left edge turns the page, not the middle',
+    (tester) async {
+      await show(tester, roster: _roster);
+      Future<void> tapAt(double x) async {
+        await tester.tapAt(Offset(x, 540));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pump();
+      }
+
+      await tapAt(1800); // Right edge.
+      expect(find.text(TalkConcept.message), findsOneWidget);
+      await tapAt(960); // Middle: stays.
+      expect(find.text(TalkConcept.message), findsOneWidget);
+      await tapAt(400); // Past the left sixth: stays.
+      expect(find.text(TalkConcept.message), findsOneWidget);
+      await tapAt(100); // Left edge.
+      expect(find.text(TalkCover.title), findsOneWidget);
+      expect(gestures, greaterThan(0)); // For full screen.
+    },
+  );
+
+  testWidgets('an edge glows under the mouse only where there is a page', (
+    tester,
+  ) async {
+    await show(tester, roster: _roster);
+    // The opacity of the glow under the mouse, left then right.
+    List<double> glows() => [
+      for (final glow in tester.widgetList<AnimatedOpacity>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AnimatedOpacity &&
+              widget.child is CustomPaint &&
+              '${(widget.child! as CustomPaint).painter.runtimeType}' ==
+                  '_EdgeGlowPainter',
+        ),
+      ))
+        glow.opacity,
+    ];
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    Future<void> hoverAt(double x) async {
+      await mouse.moveTo(Offset(x, 540));
+      await tester.pump();
+    }
+
+    await mouse.addPointer(location: const Offset(960, 540));
+    await hoverAt(100); // The cover's left: no page before it.
+    expect(glows(), [0, 0]);
+    await hoverAt(1800);
+    expect(glows(), [0, 1]);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pump(const Duration(seconds: 1));
+    await hoverAt(1810); // The last page's right: no page after it.
+    expect(glows(), [0, 0]);
+    await hoverAt(100);
+    expect(glows(), [1, 0]);
   });
 
   testWidgets('the ranking shows the top three by name, frozen on entering, '
