@@ -65,3 +65,6 @@ firestore-debug.log
 ui-debug.log
 .firebase-emulator-data/
 node_modules/
+
+# Claude Code settings: kept on this machine only.
+.claude/

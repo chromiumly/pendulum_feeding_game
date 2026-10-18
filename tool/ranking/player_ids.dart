@@ -6,6 +6,12 @@
 ///       tool/ranking/out/qr.html (printable QR codes). Refuses to overwrite
 ///       an existing players.csv, whose IDs may already be handed out.
 ///
+///   dart run tool/ranking/player_ids.dart qr
+///       Writes tool/ranking/out/qr.html again from players.csv as it is,
+///       e.g. after reordering it or adding names. Each card shows the ID and,
+///       from the fourth column, the name (else the number). The IDs, and so
+///       the QR codes, stay the same.
+///
 ///   dart run tool/ranking/player_ids.dart register [--emulator]
 ///       Registers every ID in players.csv, using the service account key in
 ///       .firebase/. Registering an ID again is harmless: it keeps the
@@ -65,6 +71,8 @@ Future<void> main(List<String> args) async {
   switch (args.firstOrNull) {
     case 'generate':
       _generate(count: int.parse(_option(args, '--count') ?? '50'));
+    case 'qr':
+      _writeQrPage();
     case 'register':
       await _register(emulator: args.contains('--emulator'));
     case 'roster':
@@ -77,7 +85,7 @@ Future<void> main(List<String> args) async {
     default:
       _fail(
         'Usage: dart run tool/ranking/player_ids.dart '
-        'generate [--count N] | register [--emulator] | roster [--dummy] | '
+        'generate [--count N] | qr | register [--emulator] | roster [--dummy] | '
         'reset [--emulator] [--confirm <project ID>]',
       );
   }
@@ -105,7 +113,8 @@ void _generate({required int count}) {
     );
   }
   final players = [
-    for (final (i, id) in ids.indexed) (number: i + 1, id: id, url: _url(id)),
+    for (final (i, id) in ids.indexed)
+      (number: i + 1, id: id, url: _url(id), name: null),
   ];
 
   _outDir.createSync(recursive: true);
@@ -124,14 +133,40 @@ void _generate({required int count}) {
 /// Returns the game URL that plays as [id], encoded in its QR code.
 String _url(String id) => '$_gameUrl?id=$id';
 
-/// Returns a printable HTML page with a numbered QR code card per player.
-String _qrPage(List<({int number, String id, String url})> players) {
+/// A row of players.csv: its number, ID, URL and, once added, name.
+typedef _Player = ({int number, String id, String url, String? name});
+
+/// Writes qr.html again from players.csv as it is.
+void _writeQrPage() {
+  _readIds(); // Checks the file and its IDs.
+  final players = <_Player>[
+    for (final line in _csv.readAsLinesSync().skip(1))
+      if (line.trim().isNotEmpty)
+        () {
+          final cells = line.split(',');
+          final name = cells.skip(3).join(',').trim();
+          return (
+            number: int.parse(cells[0]),
+            id: cells[1],
+            url: cells[2],
+            name: name.isEmpty ? null : name,
+          );
+        }(),
+  ];
+  _html.writeAsStringSync(_qrPage(players));
+  stdout.writeln('Wrote ${players.length} QR codes to ${_html.path}');
+}
+
+/// Returns a printable HTML page with a QR code card per player, labelled
+/// with the ID above the name (or, without names yet, the number).
+String _qrPage(List<_Player> players) {
   final cards = [
     for (final p in players)
       '''
 <div class="card">
   ${_qrSvg(p.url)}
-  <div class="number">No.${p.number.toString().padLeft(2, '0')}</div>
+  <div class="id">ID: ${p.id}</div>
+  <div class="name">${_escape(p.name ?? 'No.${p.number.toString().padLeft(2, '0')}')}</div>
 </div>''',
   ].join('\n');
   return '''
@@ -146,7 +181,8 @@ String _qrPage(List<({int number, String id, String url})> players) {
   .card { width: 45mm; text-align: center; break-inside: avoid;
           border: 1px dashed #bbb; padding: 4mm; }
   .card svg { width: 100%; height: auto; }
-  .number { margin-top: 2mm; font-size: 14px; }
+  .id { margin-top: 2mm; font-family: monospace; font-size: 11px; }
+  .name { margin-top: 1mm; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -158,6 +194,9 @@ $cards
 </html>
 ''';
 }
+
+/// Returns [text] safe to put in HTML.
+String _escape(String text) => const HtmlEscape().convert(text);
 
 /// Returns a QR code of [data] as SVG, with a 4-module quiet zone.
 String _qrSvg(String data) {

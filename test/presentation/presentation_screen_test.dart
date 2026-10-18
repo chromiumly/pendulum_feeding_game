@@ -149,6 +149,20 @@ void main() {
     expect(find.textContaining('の結果で固定中'), findsOneWidget);
   });
 
+  testWidgets('the honorific 様 after a name is two thirds of its size', (
+    tester,
+  ) async {
+    final guest = Roster.keyOf('guest00000000000');
+    await show(tester, roster: Roster({_hanako: '佐藤 花子', guest: '山田 花子 様'}));
+    await receive(tester, {guest: 9000, _hanako: 8200});
+    await press(tester, LogicalKeyboardKey.end);
+
+    final name = tester.widget<Text>(find.text('山田 花子'));
+    final honorific = tester.widget<Text>(find.text('様'));
+    expect(honorific.style!.fontSize, name.style!.fontSize! * 2 / 3);
+    expect(find.text('佐藤 花子'), findsOneWidget); // No honorific: as it is.
+  });
+
   testWidgets('without a roster, names are unknown until a roster file is '
       'dropped, and it is kept', (tester) async {
     await show(tester);

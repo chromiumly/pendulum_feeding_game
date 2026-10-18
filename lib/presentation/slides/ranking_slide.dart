@@ -197,7 +197,7 @@ class _Names extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final name in column) SlideText(name, style: style),
+                    for (final name in column) _Name(name, style: style),
                   ],
                 ),
               ],
@@ -205,6 +205,37 @@ class _Names extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// A player's name, with its honorific (様), if any, at two thirds of its
+/// size, on the same baseline.
+class _Name extends StatelessWidget {
+  const _Name(this.name, {required this.style});
+
+  final String name;
+  final TextStyle style;
+
+  /// The roster writes it after the name and a space, e.g. 山田 花子 様.
+  static const honorific = '様';
+
+  @override
+  Widget build(BuildContext context) {
+    if (!name.endsWith(' $honorific')) return SlideText(name, style: style);
+    final fontSize = style.fontSize!;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        SlideText(
+          name.substring(0, name.length - honorific.length - 1),
+          style: style,
+        ),
+        SizedBox(width: fontSize / 4),
+        SlideText(honorific, style: style.copyWith(fontSize: fontSize * 2 / 3)),
+      ],
     );
   }
 }
