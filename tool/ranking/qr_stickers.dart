@@ -4,7 +4,7 @@
 ///
 ///   flutter test tool/ranking/qr_stickers.dart
 ///
-/// Writes, in tool/ranking/out/qr_stickers/, 54 stickers to a page, side by
+/// Writes, in tool/ranking/out/qr_stickers/, 70 stickers to a page, side by
 /// side so that one cut along a grey line parts two of them:
 ///
 /// * qr_stickers.pdf, to print at actual size (100%);
@@ -13,10 +13,11 @@
 /// It runs under `flutter test` because it draws Japanese text with the
 /// presentation page's font; `flutter test` alone (test/) does not run it.
 ///
-/// Each sticker is 29 mm square, to fit the box on the paper items, and its
-/// code 22.6 mm across, like the Google Photos code beside it. The code is error correction level Q (about 25% may be
-/// lost), version 6 (41x41 modules) for the game's URL, and the name covers
-/// the middle 13x13 modules (about 10%), clear of the code's finder and
+/// Each sticker is 25.9 mm square, to fit inside the corner marks of the box
+/// on the paper items, and its code 21.5 mm across, the size of the Google
+/// Photos code beside it (inside the same marks). The code is error
+/// correction level Q (about 25% may be lost), version 6 (41x41 modules) for
+/// the game's URL, and the name covers the middle 13x13 modules (about 10%), clear of the code's finder and
 /// alignment patterns. The QR codes encode the same URLs as qr.html, so
 /// cards printed from it still work.
 ///
@@ -51,26 +52,31 @@ final _page = Size(
   _mm(_pageMm.height).roundToDouble(),
 );
 
-/// A sticker: 686 px = 29.0 mm square, the box on the paper items.
-const _sticker = 686.0;
+/// A sticker: 612 px = 25.9 mm square, across the corner marks of the box
+/// on the paper items (measured in their PDF).
+const _sticker = 612.0;
 
-/// The code in it: 41 modules of 13 px (0.55 mm), 22.6 mm across like the
-/// Google Photos code beside it on the paper items, in the middle of the
-/// sticker; the white around it (3.2 mm) is more than the 4-module quiet
-/// zone a reader needs.
+/// The code in it: 41 modules, 508 px = 21.5 mm across, the size of the
+/// Google Photos code beside it on the paper items (measured in their PDF),
+/// in the middle of the sticker; the white around it (2.2 mm, 4.2 modules) is
+/// the 4-module quiet zone a reader needs.
 const _modules = 41;
-const _module = 13.0;
+const _code = 508;
 
-/// (686 - 41 x 13) / 2, to whole pixels so that the modules stay sharp.
-const _margin = 76.0;
+/// (612 - 508) / 2.
+const _margin = 52.0;
+
+/// Where module line [i] (0 to 41) starts, from the code's edge: on whole
+/// pixels so that the modules stay sharp, 12 or 13 px (0.52 mm) each.
+double _edge(int i) => (i * _code / _modules).roundToDouble();
 
 /// The name's box: the middle 13x13 modules.
 const _box = 13;
 
-/// The grid: 6 columns and 9 rows of stickers side by side, at least 10 mm
+/// The grid: 7 columns and 10 rows of stickers side by side, at least 10 mm
 /// from the edges of the page.
-const _columns = 6;
-const _rows = 9;
+const _columns = 7;
+const _rows = 10;
 
 const _ink = Color(0xFF000000);
 const _nameInk = Color(0xFF222222);
@@ -162,11 +168,11 @@ void _drawSticker(Canvas canvas, Offset origin, _Player player) {
       final inBox = row >= first && row <= last && col >= first && col <= last;
       if (inBox || !image.isDark(row, col)) continue;
       canvas.drawRect(
-        Rect.fromLTWH(
-          origin.dx + _margin + col * _module,
-          origin.dy + _margin + row * _module,
-          _module,
-          _module,
+        Rect.fromLTRB(
+          origin.dx + _margin + _edge(col),
+          origin.dy + _margin + _edge(row),
+          origin.dx + _margin + _edge(col + 1),
+          origin.dy + _margin + _edge(row + 1),
         ),
         dark,
       );
@@ -174,14 +180,14 @@ void _drawSticker(Canvas canvas, Offset origin, _Player player) {
   }
 
   // The name, in the box.
-  final box = Rect.fromLTWH(
-    origin.dx + _margin + first * _module,
-    origin.dy + _margin + first * _module,
-    _box * _module,
-    _box * _module,
+  final box = Rect.fromLTRB(
+    origin.dx + _margin + _edge(first),
+    origin.dy + _margin + _edge(first),
+    origin.dx + _margin + _edge(last + 1),
+    origin.dy + _margin + _edge(last + 1),
   );
   final lines = _nameLines(player.name);
-  final inner = box.deflate(_module * 0.6);
+  final inner = box.deflate(_code / _modules * 0.6);
   final units = lines.fold(0.0, (sum, line) => sum + line.$2);
   final unit = math.min(inner.height / units, inner.width / 2.4);
   var y = inner.center.dy - unit * units / 2;

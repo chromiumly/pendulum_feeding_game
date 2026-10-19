@@ -73,10 +73,10 @@ dart run tool/ranking/player_ids.dart qr    # players.csv から qr.html を作�
 A4 のシール用紙に刷って切り分ける、中央に名前の入った QR シールも作れる:
 
 ```bash
-flutter test tool/ranking/qr_stickers.dart   # tool/ranking/out/qr_stickers/ に qr_stickers.pdf と qr_stickers.html（50 人分が A4 1 ページ。シールは隙間なく並び、灰色の線で切り分ける）
+flutter test tool/ranking/qr_stickers.dart   # tool/ranking/out/qr_stickers/ に qr_stickers.pdf と qr_stickers.html（1 ページに 70 個、50 人分が A4 1 ページ。シールは隙間なく並び、灰色の線で切り分ける）
 ```
 
-- 1 個は 29mm 四方（ペーパーアイテムの枠に合わせた大きさ）で、QR の模様は約 22.6mm（隣の Google フォトの QR に合わせた大きさ）。誤り訂正はレベル Q（41×41 ドット）で、中央の 13×13 ドットに「姓／名／様」を入れる。中身の URL は `qr.html` と同じなので、前に配ったカードもそのまま使える。
+- 1 個は 25.9mm 四方（ペーパーアイテムの枠の、角の「」形の印に合わせた大きさ）で、QR の模様は 21.5mm（隣の Google フォトの QR の模様と同じ大きさ）。まわりの白い余白は 2.2mm（読み取りに必要な 4 ドット分）。誤り訂正はレベル Q（41×41 ドット）で、中央の 13×13 ドットに「姓／名／様」を入れる。中身の URL は `qr.html` と同じなので、前に配ったカードもそのまま使える。
 - PDF を「実際のサイズ（100%）」で印刷する。等倍で刷れたかは、各ページの下の 100mm の目盛りで確かめる。全部刷る前に 1 ページだけ刷って、スマホで読めるか確かめる。
 
 3. 名簿を書き出す:
